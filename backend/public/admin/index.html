@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Portal — My-Eng</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <!-- Ionicons -->
+  <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+  <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+</head>
+<body>
+
+  <!-- ═══════════ LOGIN VIEW ═══════════ -->
+  <div id="login-view">
+    <div class="login-card">
+      <div class="login-logo">
+        <img src="assets/E-1.png" alt="My-Eng Logo" class="login-brand-logo" />
+        <h1>Admin</h1>
+      </div>
+      <p class="login-sub">ระบบจัดการแอปฝึกภาษาอังกฤษ</p>
+
+      <div id="login-error" class="error-box hidden"></div>
+
+      <form id="login-form" autocomplete="off">
+        <label>อีเมล</label>
+        <input id="inp-email" type="email" placeholder="admin@example.com" required />
+
+        <label>รหัสผ่าน</label>
+        <div class="pw-wrap">
+          <input id="inp-password" type="password" placeholder="รหัสผ่าน" required />
+          <button type="button" id="toggle-pw" class="toggle-pw">👁</button>
+        </div>
+
+        <button type="submit" id="login-btn" class="btn-primary">
+          <span id="login-label">เข้าสู่ระบบ</span>
+          <span id="login-spinner" class="spinner hidden"></span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ═══════════ DASHBOARD VIEW ═══════════ -->
+  <div id="dashboard-view" class="hidden">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-text">
+          <span class="brand-title">Admin</span>
+          <span class="brand-sub">English App</span>
+        </div>
+        <button class="collapse-toggle" aria-label="Toggle sidebar">
+          <ion-icon name="chevron-back-outline"></ion-icon>
+        </button>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="#" class="nav-item active" data-section="overview">
+          <span class="nav-icon-wrap"><ion-icon name="grid-outline"></ion-icon></span><span class="nav-label">Dashboard</span>
+        </a>
+        <a href="#" class="nav-item" data-section="vocabulary">
+          <span class="nav-icon-wrap"><ion-icon name="book-outline"></ion-icon></span><span class="nav-label">แบบฝึกหัดคำศัพท์</span>
+        </a>
+        <a href="#" class="nav-item" data-section="tense">
+          <span class="nav-icon-wrap"><ion-icon name="document-text-outline"></ion-icon></span><span class="nav-label">แบบฝึก Tense</span>
+        </a>
+        <a href="#" class="nav-item" data-section="listening-reading">
+          <span class="nav-icon-wrap"><ion-icon name="headset-outline"></ion-icon></span><span class="nav-label">การฟังและการดู Tense</span>
+        </a>
+        <a href="#" class="nav-item" data-section="vocab-library">
+          <span class="nav-icon-wrap"><ion-icon name="library-outline"></ion-icon></span><span class="nav-label">คลังคำศัพท์</span>
+        </a>
+        <a href="#" class="nav-item" data-section="stats">
+          <span class="nav-icon-wrap"><ion-icon name="bar-chart-outline"></ion-icon></span><span class="nav-label">สถิติการใช้งาน</span>
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <a href="#" class="nav-item nav-logout" id="logout-btn">
+          <span class="nav-icon-wrap"><ion-icon name="log-out-outline"></ion-icon></span><span class="nav-label">ออกจากระบบ</span>
+        </a>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <header class="topbar">
+        <h2 id="section-title">ภาพรวมระบบ</h2>
+        <span id="topbar-user" class="topbar-user"></span>
+      </header>
+
+      <!-- Overview Section -->
+      <section id="section-overview" class="section">
+        <div class="stats-grid">
+          <div class="stat-card blue">
+            <div class="stat-icon-wrap" style="background:#E3F2FD">
+              <ion-icon name="people-outline" style="color:#2196F3;font-size:26px"></ion-icon>
+            </div>
+            <div class="stat-info">
+              <p class="stat-label">สมาชิกทั้งหมด</p>
+              <p id="stat-users" class="stat-value">—</p>
+            </div>
+          </div>
+          <div class="stat-card green">
+            <div class="stat-icon-wrap" style="background:#E8F9ED">
+              <ion-icon name="book-outline" style="color:#4CAF50;font-size:26px"></ion-icon>
+            </div>
+            <div class="stat-info">
+              <p class="stat-label">แบบฝึกหัดทั้งหมด</p>
+              <p id="stat-exercises" class="stat-value">—</p>
+            </div>
+          </div>
+          <div class="stat-card purple">
+            <div class="stat-icon-wrap" style="background:#F3E5F5">
+              <ion-icon name="library-outline" style="color:#9C27B0;font-size:26px"></ion-icon>
+            </div>
+            <div class="stat-info">
+              <p class="stat-label">คำศัพท์ทั้งหมด</p>
+              <p id="stat-vocab" class="stat-value">—</p>
+            </div>
+          </div>
+          <div class="stat-card orange">
+            <div class="stat-icon-wrap" style="background:#FCE4EC">
+              <ion-icon name="shield-checkmark-outline" style="color:#E91E63;font-size:26px"></ion-icon>
+            </div>
+            <div class="stat-info">
+              <p class="stat-label">Admin</p>
+              <p id="stat-admins" class="stat-value">—</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card mt-4">
+          <h3>จัดการระบบ</h3>
+          <div class="quick-menu">
+            <a href="#" class="quick-menu-item" data-section="vocabulary">
+              <span class="qm-icon" style="background:#EEF0FF;color:#5B4FCF"><ion-icon name="book-outline"></ion-icon></span>
+              <span class="qm-body"><span class="qm-label">แบบฝึกหัดคำศัพท์</span><span class="qm-sub">จัดการชุดคำศัพท์และคำแปล</span></span>
+              <ion-icon name="chevron-forward-outline" class="qm-chevron"></ion-icon>
+            </a>
+            <a href="#" class="quick-menu-item" data-section="tense">
+              <span class="qm-icon" style="background:#FFF3E0;color:#FF9500"><ion-icon name="document-text-outline"></ion-icon></span>
+              <span class="qm-body"><span class="qm-label">แบบฝึก Tense</span><span class="qm-sub">จัดการแบบฝึก Tense Past/Future</span></span>
+              <ion-icon name="chevron-forward-outline" class="qm-chevron"></ion-icon>
+            </a>
+            <a href="#" class="quick-menu-item" data-section="listening-reading">
+              <span class="qm-icon" style="background:#F3E8FF;color:#9C27B0"><ion-icon name="headset-outline"></ion-icon></span>
+              <span class="qm-body"><span class="qm-label">การฟังและการดู Tense</span><span class="qm-sub">แบบฝึกการฟังและการดู</span></span>
+              <ion-icon name="chevron-forward-outline" class="qm-chevron"></ion-icon>
+            </a>
+            <a href="#" class="quick-menu-item" data-section="vocab-library">
+              <span class="qm-icon" style="background:#E8F9ED;color:#4CAF50"><ion-icon name="library-outline"></ion-icon></span>
+              <span class="qm-body"><span class="qm-label">คลังคำศัพท์</span><span class="qm-sub">คลังคำศัพท์ทั้งหมดในระบบ</span></span>
+              <ion-icon name="chevron-forward-outline" class="qm-chevron"></ion-icon>
+            </a>
+            <a href="#" class="quick-menu-item" data-section="stats">
+              <span class="qm-icon" style="background:#FCE4EC;color:#E91E63"><ion-icon name="bar-chart-outline"></ion-icon></span>
+              <span class="qm-body"><span class="qm-label">สถิติการใช้งาน</span><span class="qm-sub">ดูสถิติการทำแบบฝึกหัดของสมาชิก</span></span>
+              <ion-icon name="chevron-forward-outline" class="qm-chevron"></ion-icon>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- Users Section -->
+      <section id="section-users" class="section hidden">
+        <div class="card">
+          <h3>รายชื่อสมาชิก</h3>
+          <div id="users-loading" class="text-muted">กำลังโหลด...</div>
+          <table id="users-table" class="data-table hidden">
+            <thead>
+              <tr><th>#</th><th>UID</th><th>อีเมล</th><th>ชื่อ</th><th>สมัครเมื่อ</th><th>จัดการ</th></tr>
+            </thead>
+            <tbody id="users-tbody"></tbody>
+          </table>
+          <div id="users-pagination" class="pagination"></div>
+        </div>
+      </section>
+
+      <!-- Edit User Modal -->
+      <div id="edit-user-modal" class="modal-overlay hidden">
+        <div class="modal-card">
+          <h3>แก้ไขข้อมูลสมาชิก</h3>
+          <input type="hidden" id="edit-uid" />
+          <label>ชื่อ (displayName)</label>
+          <input id="edit-displayName" type="text" placeholder="ชื่อผู้ใช้" />
+          <label>อีเมล</label>
+          <input id="edit-email" type="email" placeholder="อีเมล" />
+          <div id="edit-error" class="error-box hidden"></div>
+          <div class="modal-actions">
+            <button id="edit-cancel-btn" class="btn-secondary">ยกเลิก</button>
+            <button id="edit-save-btn" class="btn-primary" style="width:auto;margin-top:0;padding:10px 24px;">บันทึก</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Exercises Section -->
+      <section id="section-exercises" class="section hidden">
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <h3 style="margin-bottom:0">แบบฝึกหัดทั้งหมด</h3>
+            <button id="add-exercise-btn" class="btn-add">➕ เพิ่มชุดใหม่</button>
+          </div>
+
+          <!-- Category Tabs -->
+          <div id="exercise-tabs" class="tab-container">
+            <button class="tab-btn active" data-category="all">ทั้งหมด</button>
+            <button class="tab-btn" data-category="vocab">📚 คำศัพท์</button>
+            <button class="tab-btn" data-category="tense">⏱ Tense</button>
+            <button class="tab-btn" data-category="listening">🎧 การฟังและดู</button>
+          </div>
+
+          <div id="exercises-loading" class="text-muted">กำลังโหลด...</div>
+          <table id="exercises-table" class="data-table hidden">
+            <thead>
+              <tr><th>#</th><th>ชื่อชุด</th><th>ประเภท</th><th>คำอธิบาย</th><th>จำนวนข้อ</th><th>จัดการ</th></tr>
+            </thead>
+            <tbody id="exercises-tbody"></tbody>
+          </table>
+          <div id="exercises-pagination" class="pagination"></div>
+        </div>
+      </section>
+
+      <!-- Exercise Modal (Add / Edit — Generator + Manual) -->
+      <div id="exercise-modal" class="modal-overlay hidden">
+        <div class="modal-card wide">
+          <div class="modal-head">
+            <h3 id="exercise-modal-title">เพิ่มชุดแบบฝึกหัด</h3>
+            <button id="ex-close-x" class="modal-x" aria-label="ปิด">&times;</button>
+          </div>
+
+          <input type="hidden" id="ex-id" />
+
+          <!-- ===== Mode Switcher ===== -->
+          <div class="mode-switcher">
+            <button type="button" class="mode-btn active" data-mode="generator" id="mode-btn-generator">
+              🤖 สร้างด้วยระบบอัตโนมัติ (Generator)
+            </button>
+            <button type="button" class="mode-btn" data-mode="manual" id="mode-btn-manual">
+              ✍️ สร้างด้วยตนเอง (Manual)
+            </button>
+          </div>
+
+          <!-- ===== Common Fields ===== -->
+          <div class="form-row">
+            <div class="form-field">
+              <label>ชื่อชุด <span class="req">*</span></label>
+              <input id="ex-title" type="text" placeholder="เช่น คำศัพท์ ชุดที่ 1" />
+            </div>
+            <div class="form-field">
+              <label>ประเภท <span class="req">*</span></label>
+              <select id="ex-category">
+                <option value="vocab">📚 คำศัพท์ (vocab)</option>
+                <option value="tense">⏱ Tense (tense)</option>
+                <option value="listening">🎧 ฟังและดู (listening)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-field">
+            <label>คำอธิบาย</label>
+            <input id="ex-description" type="text" placeholder="เช่น คำศัพท์พื้นฐานระดับ A1" />
+          </div>
+
+          <div class="form-row">
+            <div class="form-field">
+              <label>ระดับ CEFR <span class="req">*</span></label>
+              <select id="ex-level">
+                <option value="A1">A1 (เริ่มต้น)</option>
+                <option value="A2" selected>A2 (พื้นฐาน)</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label>เสียง TTS</label>
+              <select id="ex-tts">
+                <option value="female" selected>หญิง</option>
+                <option value="male">ชาย</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- ===== Generator Mode Panel ===== -->
+          <div id="ex-generator-panel">
+            <div class="form-row">
+              <div class="form-field">
+                <label>จำนวนข้อ: <span id="ex-count-label" class="count-val">10</span></label>
+                <input id="ex-count" type="range" min="1" max="15" value="10" />
+              </div>
+            </div>
+
+            <!-- Generator Preview -->
+            <div id="ex-gen-preview" class="hidden">
+              <div class="preview-head">
+                <h4>ตัวอย่างแบบฝึกหัด <span id="ex-gen-preview-count" class="count-badge">0</span> ข้อ</h4>
+                <span id="ex-gen-preview-status" class="status-badge draft">แบบร่าง</span>
+              </div>
+              <div id="ex-gen-preview-items" class="preview-list"></div>
+            </div>
+
+            <div class="toggle-row">
+              <span class="toggle-label" id="ex-toggle-label">บันทึกเป็นแบบร่าง</span>
+              <label class="toggle-switch">
+                <input type="checkbox" id="ex-publish-toggle" />
+                <span class="toggle-slider"></span>
+              </label>
+              <span class="toggle-hint">เผยแพร่ทันที</span>
+            </div>
+          </div>
+
+          <!-- ===== Manual Mode Panel ===== -->
+          <div id="ex-manual-panel" class="hidden">
+            <div class="manual-section-head">
+              <h4>รายการคำถาม <span id="ex-item-count" class="count-badge">0</span> ข้อ</h4>
+              <button type="button" id="ex-add-item-btn" class="btn-add" style="padding:6px 14px;font-size:13px;">+ เพิ่มข้อใหม่</button>
+            </div>
+            <div id="ex-item-editor-list" class="manual-item-list"></div>
+            <div id="ex-manual-hint" class="text-muted" style="font-size:12px;margin-top:6px;">
+              กรุณาเพิ่มอย่างน้อย 1 ข้อ — กรอกคำศัพท์ (EN), คำแปล (TH), ประโยคตัวอย่าง และตัวเลือกหลอก (Distractors)
+            </div>
+          </div>
+
+          <div id="exercise-error" class="error-box hidden"></div>
+
+          <!-- ===== Actions ===== -->
+          <div class="modal-actions">
+            <button id="exercise-cancel-btn" class="btn-secondary">ยกเลิก</button>
+            <button id="ex-generate-btn" class="btn-primary gen-btn">
+              <span id="ex-generate-label">สร้างแบบฝึกหัด</span>
+              <span id="ex-spinner" class="spinner hidden"></span>
+            </button>
+            <button id="ex-save-btn" class="btn-primary gen-btn hidden">บันทึก</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Exercise Generator Modal (M2.2) -->
+      <div id="generator-modal" class="modal-overlay hidden">
+        <div class="modal-card wide">
+          <div class="modal-head">
+            <h3>สร้างแบบฝึกหัดใหม่ (Generator)</h3>
+            <button id="gen-close-x" class="modal-x" aria-label="ปิด">&times;</button>
+          </div>
+
+          <!-- ===== ฟอร์มสร้าง ===== -->
+          <div id="gen-form">
+            <div class="form-row">
+              <div class="form-field">
+                <label>ชื่อชุด <span class="req">*</span></label>
+                <input id="gen-title" type="text" placeholder="เช่น คำศัพท์ A1 ชุดที่ 11" />
+              </div>
+              <div class="form-field">
+                <label>ประเภท</label>
+                <select id="gen-category">
+                  <option value="vocab" selected>📚 คำศัพท์ (vocab)</option>
+                  <option value="tense" disabled>⏱ Tense (เร็วๆ นี้)</option>
+                  <option value="listening" disabled>🎧 ฟังและดู (เร็วๆ นี้)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-field">
+              <label>คำอธิบาย</label>
+              <input id="gen-description" type="text" placeholder="เช่น คำศัพท์พื้นฐานระดับ A1 สำหรับผู้เริ่มต้น" />
+            </div>
+
+            <div class="form-row">
+              <div class="form-field">
+                <label>ระดับ CEFR <span class="req">*</span></label>
+                <select id="gen-level">
+                  <option value="A1">A1 (เริ่มต้น)</option>
+                  <option value="A2" selected>A2 (พื้นฐาน)</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label>จำนวนข้อ: <span id="gen-count-label" class="count-val">10</span></label>
+                <input id="gen-count" type="range" min="1" max="15" value="10" />
+              </div>
+              <div class="form-field">
+                <label>เสียง TTS</label>
+                <select id="gen-tts">
+                  <option value="female" selected>หญิง</option>
+                  <option value="male">ชาย</option>
+                </select>
+              </div>
+            </div>
+
+            <div id="gen-error" class="error-box hidden"></div>
+          </div>
+
+          <!-- ===== พรีวิว (ซ่อนจนกว่าจะ Generate) ===== -->
+          <div id="gen-preview" class="hidden">
+            <div class="preview-head">
+              <h4>ตัวอย่างแบบฝึกหัด <span id="gen-preview-count" class="count-badge">0</span> ข้อ</h4>
+              <span id="gen-preview-status" class="status-badge draft">แบบร่าง</span>
+            </div>
+            <div id="gen-preview-items" class="preview-list"></div>
+          </div>
+
+          <!-- ===== สวิตช์เผยแพร่ ===== -->
+          <div class="toggle-row">
+            <span class="toggle-label" id="gen-toggle-label">บันทึกเป็นแบบร่าง</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="gen-publish-toggle" />
+              <span class="toggle-slider"></span>
+            </label>
+            <span class="toggle-hint">เผยแพร่ทันที</span>
+          </div>
+
+          <!-- ===== ปุ่ม ===== -->
+          <div class="modal-actions">
+            <button id="gen-cancel-btn" class="btn-secondary">ยกเลิก</button>
+            <button id="gen-generate-btn" class="btn-primary gen-btn">
+              <span id="gen-generate-label">สร้างแบบฝึกหัด</span>
+              <span id="gen-spinner" class="spinner hidden"></span>
+            </button>
+            <button id="gen-save-btn" class="btn-primary gen-btn hidden">บันทึก</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Vocab Library Section -->
+      <section id="section-vocab-library" class="section hidden">
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <h3 style="margin-bottom:0">คลังคำศัพท์</h3>
+            <button id="add-vocab-btn" class="btn-add">➕ เพิ่มคำศัพท์</button>
+          </div>
+          <div id="vocab-loading" class="text-muted">กำลังโหลด...</div>
+          <table id="vocab-table" class="data-table hidden">
+            <thead>
+              <tr><th>#</th><th>คำศัพท์ (EN)</th><th>คำแปล (TH)</th><th>เสียง TTS</th><th>จัดการ</th></tr>
+            </thead>
+            <tbody id="vocab-tbody"></tbody>
+          </table>
+          <div id="vocab-pagination" class="pagination"></div>
+        </div>
+      </section>
+
+      <!-- Vocab Modal (Add / Edit) -->
+      <div id="vocab-modal" class="modal-overlay hidden">
+        <div class="modal-card" style="max-width:440px">
+          <h3 id="vocab-modal-title">เพิ่มคำศัพท์</h3>
+          <input type="hidden" id="vocab-doc-id" />
+
+          <label>คำศัพท์ภาษาอังกฤษ <span style="color:red">*</span></label>
+          <input id="vocab-wordEN" type="text" placeholder="เช่น Apple" />
+
+          <label>คำแปลภาษาไทย <span style="color:red">*</span></label>
+          <input id="vocab-wordTH" type="text" placeholder="เช่น แอปเปิ้ล" />
+
+          <label>เสียง TTS (ไม่บังคับ)</label>
+          <input id="vocab-ttsVoice" type="text" placeholder="เช่น en-US-female" />
+
+          <div id="vocab-error" class="error-box hidden"></div>
+          <div class="modal-actions">
+            <button id="vocab-cancel-btn" class="btn-secondary">ยกเลิก</button>
+            <button id="vocab-save-btn" class="btn-primary" style="width:auto;margin-top:0;padding:10px 24px;">บันทึก</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section: Vocabulary Exercise Management -->
+      <section id="section-vocabulary" class="section hidden">
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+            <div>
+              <h3 style="margin-bottom:0">📚 จัดการแบบฝึกหัดคำศัพท์</h3>
+              <p class="text-muted" style="font-size:12px;margin-top:4px;">4 โหมด: Matching · Spelling · Listen &amp; Repeat · Fill-in-the-blank | 10-15 ข้อต่อชุด</p>
+            </div>
+            <button id="add-vocabset-btn" class="btn-add">➕ สร้างชุดคำศัพท์</button>
+          </div>
+          <div id="vocabset-loading" class="text-muted">กำลังโหลด...</div>
+          <table id="vocabset-table" class="data-table hidden">
+            <thead>
+              <tr><th>#</th><th>ชื่อชุด</th><th>ข้อ</th><th>สถานะ</th><th>จัดการ</th></tr>
+            </thead>
+            <tbody id="vocabset-tbody"></tbody>
+          </table>
+          <div id="vocabset-pagination" class="pagination"></div>
+        </div>
+      </section>
+
+      <!-- Vocabulary Set Edit Section (Full Page) -->
+      <section id="section-vocabset-edit" class="section hidden">
+        <div class="edit-page-header">
+          <button id="vocabset-back-btn" class="btn-back">← กลับ</button>
+          <h2 id="vocabset-page-title">สร้างชุดคำศัพท์</h2>
+        </div>
+        <div class="vocabset-edit-form">
+
+          <div class="form-field">
+            <label>ชื่อชุด <span class="req">*</span></label>
+            <input id="vocabset-title" type="text" placeholder="เช่น คำศัพท์ A1 ชุดที่ 1" />
+          </div>
+
+          <div class="form-field">
+            <label>คำอธิบาย</label>
+            <input id="vocabset-description" type="text" placeholder="เช่น คำศัพท์พื้นฐานเกี่ยวกับอาหาร" />
+          </div>
+
+          <!-- Stepper: 4 Steps - Matching → Spelling → Listen & Repeat → Fill-in-blank -->
+          <div class="wiz-steps" style="margin: 4px 0 20px;">
+            <div class="wiz-step active" id="wiz-ind-1">
+              <span class="wiz-step-num">1</span>
+              <span class="wiz-step-label">จับคู่<small>Matching</small></span>
+            </div>
+            <div class="wiz-step-line"></div>
+            <div class="wiz-step" id="wiz-ind-2">
+              <span class="wiz-step-num">2</span>
+              <span class="wiz-step-label">สะกด<small>Spelling</small></span>
+            </div>
+            <div class="wiz-step-line"></div>
+            <div class="wiz-step" id="wiz-ind-3">
+              <span class="wiz-step-num">3</span>
+              <span class="wiz-step-label">ฟัง-พูด<small>Listen & Repeat</small></span>
+            </div>
+            <div class="wiz-step-line"></div>
+            <div class="wiz-step" id="wiz-ind-4">
+              <span class="wiz-step-num">4</span>
+              <span class="wiz-step-label">เติมช่องว่าง<small>Fill-in-blank</small></span>
+            </div>
+          </div>
+
+          <!-- Step 1 · Matching Setup (MASTER pairs) -->
+          <div id="vocabset-step-1" class="wiz-pane">
+            <div class="manual-section-head">
+              <h4>1️⃣ จับคู่คำศัพท์ (Master Data) <span id="vocabset-item-count" class="count-badge">0</span></h4>
+            </div>
+            <div class="pair-info-alert">
+              <span class="pair-info-icon">ℹ️</span>
+              <span>กรอกคำภาษาอังกฤษ (EN) และคำแปลภาษาไทย (TH) ให้ครบอย่างน้อย 10 คู่ — คู่คำเหล่านี้คือข้อมูลหลัก (Master) ที่ทุกโหมดอ้างอิง</span>
+            </div>
+            <div class="pair-column-headers">
+              <span>ภาษาอังกฤษ</span>
+              <span>ภาษาไทย</span>
+            </div>
+            <div id="vocabset-item-editor-list" class="manual-item-list vocabset-item-list"></div>
+            <button type="button" id="vocabset-add-item-btn" class="btn-add-full">+ เพิ่มคู่คำศัพท์</button>
+
+            <div class="wiz-nav">
+              <span></span>
+              <button type="button" id="vocabset-next-btn" class="btn-primary wiz-next-btn">ถัดไป: สะกดคำ →</button>
+            </div>
+          </div>
+
+          <!-- Step 2 · Spelling Setup -->
+          <div id="vocabset-step-2" class="wiz-pane hidden">
+            <div class="manual-section-head">
+              <h4>2️⃣ เลือกคำศัพท์สำหรับสะกด (Spelling) <span id="vocabset-spelling-count" class="count-badge">0</span></h4>
+            </div>
+            <div class="pair-info-alert">
+              <span class="pair-info-icon">ℹ️</span>
+              <span>เลือกคำศัพท์จากโหมดจับคู่ (Step 1) เพื่อเป็นแบบฝึกหัดสะกด — ผู้เรียนจะต้องสะกดคำศัพท์ให้ถูกตามคำแปลภาษาไทย</span>
+            </div>
+            
+            <div class="spelling-word-list">
+              <div class="spelling-item-headers">
+                <span style="width: 40px;">เลือก</span>
+                <span style="flex: 1;">ภาษาอังกฤษ</span>
+                <span style="flex: 1;">ภาษาไทย</span>
+              </div>
+              <div id="vocabset-spelling-items" class="manual-item-list"></div>
+            </div>
+            
+            <div class="wiz-nav">
+              <button type="button" id="vocabset-prev-btn" class="btn-secondary">← ย้อนกลับ</button>
+              <button type="button" id="vocabset-next-btn-s2" class="btn-primary wiz-next-btn">ถัดไป: ฟัง-พูด →</button>
+            </div>
+          </div>
+
+          <!-- Step 3 · Listen & Repeat Setup -->
+          <div id="vocabset-step-3" class="wiz-pane hidden">
+            <div class="manual-section-head">
+              <h4>3️⃣ เลือกคำศัพท์สำหรับฟังและพูดตาม (Listen & Repeat) <span id="vocabset-listen-count" class="count-badge">0</span></h4>
+            </div>
+            <div class="pair-info-alert">
+              <span class="pair-info-icon">ℹ️</span>
+              <span>เลือกคำศัพท์จากโหมดจับคู่ (Step 1) สำหรับให้ผู้เรียนฟังเสียงและพูดตาม — ผู้เรียนสามารถข้ามด่านนี้ได้</span>
+            </div>
+            
+            <div class="spelling-word-list">
+              <div class="spelling-item-headers">
+                <span style="width: 40px;">เลือก</span>
+                <span style="flex: 1;">ภาษาอังกฤษ</span>
+                <span style="flex: 1;">ภาษาไทย</span>
+              </div>
+              <div id="vocabset-listen-items" class="manual-item-list"></div>
+            </div>
+            
+            <div class="wiz-nav">
+              <button type="button" id="vocabset-prev-btn-s3" class="btn-secondary">← ย้อนกลับ</button>
+              <button type="button" id="vocabset-next-btn-s3" class="btn-primary wiz-next-btn">ถัดไป: เติมช่องว่าง →</button>
+            </div>
+          </div>
+
+          <!-- Step 4 · Fill-in-the-blank Setup -->
+          <div id="vocabset-step-4" class="wiz-pane hidden">
+            <div class="manual-section-head">
+              <h4>4️⃣ ประโยคตัวอย่าง (โหมดเติมช่องว่าง) <span id="vocabset-fib-count" class="count-badge">0</span></h4>
+            </div>
+            <div class="pair-info-alert">
+              <span class="pair-info-icon">ℹ️</span>
+              <span>เลือกคำศัพท์จากโหมดจับคู่ที่จะเว้นช่องว่าง แล้วกรอกประโยคภาษาอังกฤษและคำแปล — ส่วนนี้ไม่ได้กำหนดคำศัพท์ใหม่ อ้างอิงจาก Master เท่านั้น</span>
+            </div>
+            <div class="fib-column-headers">
+              <span></span>
+              <span>คำศัพท์ (EN)</span>
+              <span>ประโยคภาษาอังกฤษ</span>
+              <span>คำแปลประโยค</span>
+            </div>
+<div style="display:flex;justify-content:flex-end;margin-bottom:6px;">
+              <button type="button" id="vocabset-add-fib-btn" class="btn-primary" style="padding:6px 14px;font-size:13px;">➕ เพิ่มเติมคำในช่องว่าง</button>
+            </div>
+            <div id="vocabset-fib-list" class="manual-item-list vocabset-item-list"></div>
+
+            <div class="wiz-nav">
+              <button type="button" id="vocabset-prev-btn-s4" class="btn-secondary">← ย้อนกลับ</button>
+              <span></span>
+            </div>
+
+            <div class="toggle-row" style="margin-top:16px;">
+              <span class="toggle-label" id="vocabset-toggle-label">บันทึกเป็นแบบร่าง</span>
+              <label class="toggle-switch">
+                <input type="checkbox" id="vocabset-publish-toggle" />
+                <span class="toggle-slider"></span>
+              </label>
+              <span class="toggle-hint">เผยแพร่ทันที</span>
+            </div>
+
+            <div id="vocabset-error" class="error-box hidden"></div>
+            <div class="modal-actions" style="margin-top:24px;">
+              <button id="vocabset-cancel-btn" class="btn-secondary">ยกเลิก</button>
+              <button id="vocabset-save-btn" class="btn-primary gen-btn">บันทึก</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Tense Exercise Management -->
+      <section id="section-tense" class="section hidden">
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+            <div>
+              <h3 style="margin-bottom:0"><ion-icon name="document-text-outline" style="vertical-align:-2px;"></ion-icon> จัดการแบบฝึกหัด Tense / Grammar</h3>
+              <p class="text-muted" style="font-size:12px;margin-top:4px;">3 โหมด: Sentence Reordering · Fill-in-blank · Listen &amp; Repeat | 10-15 ข้อต่อชุด</p>
+            </div>
+            <button id="add-tenseset-btn" class="btn-add"><ion-icon name="add-outline" style="vertical-align:-2px;"></ion-icon> สร้างชุด Tense</button>
+          </div>
+          <div id="tenseset-loading" class="text-muted">กำลังโหลด...</div>
+          <table id="tenseset-table" class="data-table hidden">
+            <thead>
+              <tr><th>#</th><th>ชื่อชุด</th><th>Tense</th><th>ข้อ</th><th>สถานะ</th><th>จัดการ</th></tr>
+            </thead>
+            <tbody id="tenseset-tbody"></tbody>
+          </table>
+          <div id="tenseset-pagination" class="pagination"></div>
+        </div>
+        <!-- ปุ่ม ➕ ลอยมุมขวาล่าง (ตามเอกสาร ภาพที่ 3-54) -->
+        <button id="add-tenseset-fab" class="btn-add" type="button" title="เพิ่มชุดใหม่" style="position:fixed;bottom:24px;right:24px;z-index:90;width:58px;height:58px;border-radius:50%;padding:0;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,0,0,.30);"><ion-icon name="add" style="font-size:26px;color:#fff;"></ion-icon></button>
+      </section>
+
+      <!-- Tense Set Edit Section (Full Page) -->
+      <section id="section-tenseset-edit" class="section hidden">
+        <div class="edit-page-header">
+          <button id="tenseset-back-btn" class="btn-back">← กลับ</button>
+          <h2 id="tenseset-modal-title">สร้างชุด Tense</h2>
+        </div>
+        <div class="vocabset-edit-form">
+
+          <!-- Stepper: ข้อมูลชุด → สร้างโจทย์ -->
+          <div class="wiz-steps" style="margin: 4px 0 20px;">
+            <div class="wiz-step active" id="ts-wiz-1">
+              <span class="wiz-step-num">1</span>
+              <span class="wiz-step-label">ข้อมูลชุด<small>ตั้งชื่อชุด</small></span>
+            </div>
+            <div class="wiz-step-line"></div>
+            <div class="wiz-step" id="ts-wiz-2">
+              <span class="wiz-step-num">2</span>
+              <span class="wiz-step-label">สร้างโจทย์<small>เลือกรูปแบบ + ประโยค</small></span>
+            </div>
+          </div>
+
+          <!-- เก็บค่า tenseTag ให้ payload เดิมใช้งานได้ (ซ่อน, ค่าคงที่) -->
+          <input type="hidden" id="tenseset-tag" value="Present" />
+
+          <!-- กล่อง error ใช้ร่วมทุกขั้น -->
+          <div id="tenseset-error" class="error-box hidden"></div>
+
+          <!-- Step 1 · ข้อมูลชุด -->
+          <div id="tenseset-step-1" class="wiz-pane">
+            <div class="form-field">
+              <label>ชื่อชุด <span class="req">*</span></label>
+              <input id="tenseset-title" type="text" placeholder="เช่น Present Simple ชุดที่ 1" />
+            </div>
+          <div class="form-field">
+              <label>คำอธิบาย</label>
+              <input id="tenseset-description" type="text" placeholder="เช่น แบบฝึกหัด Present Simple สำหรับผู้เริ่มต้น" />
+            </div>
+            <div class="toggle-row">
+              <span class="toggle-label" id="tenseset-toggle-label">บันทึกเป็นแบบร่าง</span>
+              <label class="toggle-switch">
+                <input type="checkbox" id="tenseset-publish-toggle" />
+                <span class="toggle-slider"></span>
+              </label>
+              <span class="toggle-hint">เผยแพร่ทันที</span>
+            </div>
+            <div class="wiz-nav">
+              <button type="button" id="tenseset-cancel-btn" class="btn-secondary">ยกเลิก</button>
+              <button type="button" id="tenseset-next-btn-s1" class="btn-primary wiz-next-btn">ถัดไป: สร้างโจทย์ →</button>
+            </div>
+          </div>
+
+          <!-- Step 2 · สร้างโจทย์ (เลือกโหมดต่อข้อ + ประโยค) -->
+          <div id="tenseset-step-2" class="wiz-pane hidden">
+            <div class="manual-section-head">
+              <h4>รายการคำถาม <span id="tenseset-item-count" class="count-badge">0</span> ข้อ <span style="color:#888;font-weight:400;font-size:12px">(ต้อง 10-15 ข้อ)</span></h4>
+              <button type="button" id="tenseset-add-item-btn" class="btn-add" style="padding:6px 14px;font-size:13px;">+ เพิ่มคำถาม</button>
+            </div>
+            <div id="tenseset-item-editor-list" class="manual-item-list"></div>
+            <div class="wiz-nav">
+              <button type="button" id="tenseset-prev-btn-s2" class="btn-secondary">← ย้อนกลับ</button>
+              <button type="button" id="tenseset-save-btn" class="btn-primary gen-btn">บันทึกชุด</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Listening & Reading (Dialogue) Management -->
+      <section id="section-listening-reading" class="section hidden">
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+            <div>
+              <h3 style="margin-bottom:0">🎧 จัดการแบบฝึกหัดฟังและอ่าน (Dialogue)</h3>
+              <p class="text-muted" style="font-size:12px;margin-top:4px;">บทสนทนา 1 ชุด + คำถาม 3 ข้อ | ผู้พูด 2 คน พร้อมเสียงแยกเป็นรายบุคคล</p>
+            </div>
+            <button id="add-lrset-btn" class="btn-add">➕ สร้างชุดสนทนา</button>
+          </div>
+          <div id="lrset-loading" class="text-muted">กำลังโหลด...</div>
+          <table id="lrset-table" class="data-table hidden">
+            <thead>
+              <tr><th>#</th><th>ชื่อชุด</th><th>ระดับ</th><th>ผู้พูด</th><th>บรรทัด</th><th>สถานะ</th><th>จัดการ</th></tr>
+            </thead>
+            <tbody id="lrset-tbody"></tbody>
+          </table>
+          <div id="lrset-pagination" class="pagination"></div>
+        </div>
+      </section>
+
+      <!-- Listening/Reading Set Modal -->
+      <div id="lrset-modal" class="modal-overlay hidden">
+        <div class="modal-card wide" style="max-width:860px;">
+          <div class="modal-head">
+            <h3 id="lrset-modal-title">สร้างชุดสนทนา</h3>
+            <button id="lrset-close-x" class="modal-x" aria-label="ปิด">&times;</button>
+          </div>
+          <div class="form-row">
+            <div class="form-field">
+              <label>ชื่อชุด <span class="req">*</span></label>
+              <input id="lrset-title" type="text" placeholder="เช่น สนทนาที่ร้านกาแฟ" />
+            </div>
+            <div class="form-field">
+              <label>ระดับ CEFR <span class="req">*</span></label>
+              <select id="lrset-level">
+                <option value="A1">A1 (เริ่มต้น)</option>
+                <option value="A2" selected>A2 (พื้นฐาน)</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-field">
+            <label>คำอธิบาย</label>
+            <input id="lrset-description" type="text" placeholder="เช่น บทสนทนาสั้นเกี่ยวกับการสั่งกาแฟ" />
+          </div>
+          <!-- Speaker Config -->
+          <div class="speaker-config">
+            <div class="speaker-config-item speaker-a">
+              <div class="speaker-avatar">A</div>
+              <div class="speaker-fields">
+                <label>ผู้พูด A (ซ้าย)</label>
+                <input id="lrset-speakerA-name" type="text" placeholder="เช่น พนักงาน" value="Speaker A" style="max-width:180px;" />
+                <select id="lrset-speakerA-tts">
+                  <option value="male" selected>ชาย</option>
+                  <option value="female">หญิง</option>
+                </select>
+              </div>
+            </div>
+            <div class="speaker-config-item speaker-b">
+              <div class="speaker-avatar">B</div>
+              <div class="speaker-fields">
+                <label>ผู้พูด B (ขวา)</label>
+                <input id="lrset-speakerB-name" type="text" placeholder="เช่น ลูกค้า" value="Speaker B" style="max-width:180px;" />
+                <select id="lrset-speakerB-tts">
+                  <option value="male">ชาย</option>
+                  <option value="female" selected>หญิง</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <!-- Dialogue Builder + Preview -->
+          <div class="lr-builder">
+            <div class="lr-builder-left">
+              <div class="manual-section-head">
+                <h4>บทสนทนา <span id="lrset-dialogue-count" class="count-badge">0</span> บรรทัด</h4>
+                <button type="button" id="lrset-add-line-btn" class="btn-add" style="padding:6px 14px;font-size:13px;">+ เพิ่มบรรทัด</button>
+              </div>
+              <div id="lrset-dialogue-editor-list" class="manual-item-list"></div>
+            </div>
+            <div class="lr-builder-right">
+              <h4 style="font-size:14px;font-weight:600;color:#1A237E;margin-bottom:8px;">พรีวิวแชท</h4>
+              <div id="lrset-chat-preview" class="chat-preview"></div>
+            </div>
+          </div>
+          <!-- Questions -->
+          <div class="manual-section-head" style="margin-top:16px;">
+            <h4>คำถามความเข้าใจ <span style="color:#888;font-weight:400;font-size:12px">(ต้อง 3 ข้อเท่านั้น)</span></h4>
+          </div>
+          <div id="lrset-questions-editor-list" class="manual-item-list"></div>
+          <div class="toggle-row" style="margin-top:16px;">
+            <span class="toggle-label" id="lrset-toggle-label">บันทึกเป็นแบบร่าง</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="lrset-publish-toggle" />
+              <span class="toggle-slider"></span>
+            </label>
+            <span class="toggle-hint">เผยแพร่ทันที</span>
+          </div>
+          <div id="lrset-error" class="error-box hidden"></div>
+          <div class="modal-actions">
+            <button id="lrset-cancel-btn" class="btn-secondary">ยกเลิก</button>
+            <button id="lrset-save-btn" class="btn-primary gen-btn">บันทึก</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats Section -->
+      <section id="section-stats" class="section hidden">
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+            <h3 style="margin-bottom:0">สถิติการทำแบบฝึกหัดของสมาชิก</h3>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+              <input id="stats-filter-email" type="text" placeholder="กรองด้วยอีเมล..."
+                style="padding:7px 12px;border:1.5px solid #e0e0e0;border-radius:8px;font-family:'Kanit',sans-serif;font-size:13px;outline:none;width:200px;" />
+              <select id="stats-filter-cat"
+                style="padding:7px 12px;border:1.5px solid #e0e0e0;border-radius:8px;font-family:'Kanit',sans-serif;font-size:13px;outline:none;background:#fff;">
+                <option value="">ทุกประเภท</option>
+                <option value="vocab">📚 คำศัพท์</option>
+                <option value="tense">⏱ Tense</option>
+                <option value="listening">🎧 ฟังและดู</option>
+              </select>
+              <button id="stats-search-btn" class="btn-add" style="padding:7px 16px;">🔍 ค้นหา</button>
+            </div>
+          </div>
+          <div id="stats-loading" class="text-muted">เลือกค้นหาเพื่อดูสถิติ</div>
+          <table id="stats-table" class="data-table hidden">
+            <thead>
+              <tr>
+                <th>#</th><th>อีเมล</th><th>ประเภท</th><th>ชื่อแบบฝึก</th>
+                <th>คะแนน</th><th>%</th><th>เวลา (วิ)</th><th>ผล</th><th>วันที่</th>
+              </tr>
+            </thead>
+            <tbody id="stats-tbody"></tbody>
+          </table>
+          <div id="stats-pagination" class="pagination"></div>
+          <p id="stats-count" class="text-muted" style="margin-top:10px;"></p>
+        </div>
+      </section>
+
+      <!-- Admins Section -->
+      <section id="section-admins" class="section hidden">
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <h3 style="margin-bottom:0">จัดการ Admin</h3>
+            <button id="add-admin-btn" class="btn-add">➕ เพิ่ม Admin</button>
+          </div>
+          <div id="admins-loading" class="text-muted">กำลังโหลด...</div>
+          <table id="admins-table" class="data-table hidden">
+            <thead>
+              <tr><th>#</th><th>อีเมล (Document ID)</th><th>ชื่อ</th><th>บทบาท</th><th>จัดการ</th></tr>
+            </thead>
+            <tbody id="admins-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Add Admin Modal -->
+      <div id="admin-modal" class="modal-overlay hidden">
+        <div class="modal-card" style="max-width:420px">
+          <h3>เพิ่ม Admin ใหม่</h3>
+          <p style="font-size:13px;color:#888;margin-bottom:8px;">Document จะถูกสร้างที่ <code>admins/{email}</code></p>
+
+          <label>อีเมล <span style="color:red">*</span></label>
+          <input id="admin-email-inp" type="email" placeholder="admin@example.com" />
+
+          <label>ชื่อ</label>
+          <input id="admin-name-inp" type="text" placeholder="ชื่อ Admin" />
+
+          <label>บทบาท</label>
+          <input id="admin-role-inp" type="text" placeholder="เช่น superadmin, editor" value="admin" />
+
+          <div id="admin-error" class="error-box hidden"></div>
+          <div class="modal-actions">
+            <button id="admin-cancel-btn" class="btn-secondary">ยกเลิก</button>
+            <button id="admin-save-btn" class="btn-primary" style="width:auto;margin-top:0;padding:10px 24px;">เพิ่ม Admin</button>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Firebase SDK v10 via CDN -->
+  <script type="module" src="js/adminApp.js?v=7.5"></script>
+</body>
+</html>
