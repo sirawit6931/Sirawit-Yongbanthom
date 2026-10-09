@@ -6,3 +6,22 @@ backend/.env
 frontend/.env
 *.log
 .DS_Store
+Thumbs.db
+*.bak
+*.old
+*.tmp
+*.temp
+.eslintcache
+.cache/
+__pycache__/
+*.pyc
+build/
+.next/
+.temp_trash/
+docs/archive/
+# one-off shell/AI artifacts (already archived/removed)
+-1
+1097
+head_adminApp.js
+tmp-marker.cjs
+patch-tense-save.cjs
