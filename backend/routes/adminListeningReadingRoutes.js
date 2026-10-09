@@ -2,7 +2,7 @@
 // Admin Listening & Reading (Dialogue) Sets API — mount ที่ /api/admin/listening-reading-sets
 // ดูแลชุดแบบฝึกหัดหมวดฟังและอ่าน (category = 'listening') แบบเฉพาะทาง
 //
-// รูปแบบ: Chat/Dialogue Builder — บทสนทนา 1 ชุด + คำถามความเข้าใจ 3 ข้อ
+// รูปแบบ: บทสนทนา 1–3 ชุด (dialogues) — แต่ละชุดมีเส้นสนทนา + คำถาม 1 ข้อ
 // ผู้พูด 2 คน (A/B) พร้อมตั้งค่าเสียง TTS แยกเป็นรายบุคคล
 const express = require('express');
 const { FieldValue } = require('firebase-admin/firestore');
@@ -15,7 +15,30 @@ router.use(requireAdmin);
 
 const VALID_LEVELS = ['A1', 'A2'];
 const VALID_TTS = ['male', 'female'];
-const REQUIRED_QUESTIONS = 3;
+const MIN_DIALOGUES = 1;
+const MAX_DIALOGUES = 3;
+const MIN_LINES = 2;
+
+// สะอาด: เส้นสนทนาบรรทัดเดียว
+function cleanLine(d) {
+  return {
+    speaker: d && d.speaker === 'B' ? 'B' : 'A',
+    text: d ? String(d.text ?? '').trim() : '',
+  };
+}
+
+// สะอาด: คำถาม 1 ข้อ
+function cleanQuestion(q) {
+  const opts = Array.isArray(q && q.options)
+    ? q.options.map((o) => String(o).trim()).filter(Boolean).slice(0, 4)
+    : [];
+  const correctIdx = q && typeof q.correctIndex === 'number' ? q.correctIndex : 0;
+  return {
+    prompt: q ? String(q.prompt ?? '').trim() : '',
+    options: opts,
+    correctIndex: correctIdx >= 0 && correctIdx < opts.length ? correctIdx : 0,
+  };
+}
 
 function sendError(res, err) {
   const status = err instanceof ApiError ? err.statusCode : 500;
@@ -43,42 +66,42 @@ function validatePayload(body, { requireItems = true } = {}) {
     ttsVoice: VALID_TTS.includes(body.speakerB?.ttsVoice) ? body.speakerB.ttsVoice : 'female',
   };
 
-  // Dialogue script
-  const dialogue = Array.isArray(body.dialogue) ? body.dialogue : [];
-  if (requireItems && dialogue.length === 0) {
-    throw new ApiError('กรุณาเพิ่มบทสนทนาอย่างน้อย 1 บรรทัด', 422);
-  }
-  const cleanDialogue = dialogue.map((d) => ({
-    speaker: d.speaker === 'B' ? 'B' : 'A',
-    text: (d.text ?? '').trim(),
-  })).filter((d) => d.text.length > 0);
-
-  if (requireItems && cleanDialogue.length === 0) {
-    throw new ApiError('บทสนทนาต้องมีข้อความอย่างน้อย 1 บรรทัด', 422);
-  }
-
-  // Comprehension questions — exactly 3
-  const questions = Array.isArray(body.questions) ? body.questions : [];
-  if (requireItems && questions.length !== REQUIRED_QUESTIONS) {
-    throw new ApiError(`ต้องมีคำถามความเข้าใจ ${REQUIRED_QUESTIONS} ข้อเท่านั้น (ได้ ${questions.length})`, 422);
-  }
-
-  const cleanQuestions = questions.map((q) => {
-    const opts = Array.isArray(q.options) ? q.options.map((o) => String(o).trim()).filter(Boolean).slice(0, 4) : [];
-    const correctIdx = typeof q.correctIndex === 'number' ? q.correctIndex : 0;
-    return {
-      prompt: (q.prompt ?? '').trim(),
-      options: opts,
-      correctIndex: correctIdx >= 0 && correctIdx < opts.length ? correctIdx : 0,
-    };
-  });
-
-  for (let i = 0; i < cleanQuestions.length; i++) {
-    const q = cleanQuestions[i];
-    if (!q.prompt || q.options.length < 2) {
-      throw new ApiError(`คำถาม ${i + 1}: ต้องกรอกคำถาม และตัวเลือกอย่างน้อย 2 ตัวเลือก`, 422);
+  // บทสนทนา 1–3 ชุด — แต่ละชุดมีเส้นสนทนา + คำถาม 1 ข้อ
+  // รองรับข้อมูลแบบเก่า: dialogue[] + questions[] → แปลงเป็น dialogues[]
+  let rawDialogues = Array.isArray(body.dialogues) ? body.dialogues : null;
+  if (!rawDialogues) {
+    const legacyDialogue = Array.isArray(body.dialogue) ? body.dialogue : [];
+    const legacyQuestions = Array.isArray(body.questions) ? body.questions : [];
+    if (legacyDialogue.length > 0 || legacyQuestions.length > 0) {
+      if (legacyQuestions.length > 0) {
+        rawDialogues = legacyQuestions.map((q) => ({ lines: legacyDialogue, question: q }));
+      } else {
+        rawDialogues = [{ lines: legacyDialogue, question: {} }];
+      }
+    } else {
+      rawDialogues = [];
     }
   }
+
+  if (requireItems && rawDialogues.length < MIN_DIALOGUES) {
+    throw new ApiError(`ต้องมีบทสนทนาอย่างน้อย ${MIN_DIALOGUES} ชุด`, 422);
+  }
+  if (rawDialogues.length > MAX_DIALOGUES) {
+    throw new ApiError(`บทสนทนามีได้ไม่เกิน ${MAX_DIALOGUES} ชุด (ได้ ${rawDialogues.length})`, 422);
+  }
+
+  const dialogues = rawDialogues.map((d, di) => {
+    const n = di + 1;
+    const lines = Array.isArray(d && d.lines) ? d.lines.map(cleanLine).filter((l) => l.text.length > 0) : [];
+    if (requireItems && lines.length < MIN_LINES) {
+      throw new ApiError(`บทสนทนาที่ ${n}: ต้องมีเส้นสนทนาอย่างน้อย ${MIN_LINES} บรรทัด`, 422);
+    }
+    const question = cleanQuestion(d ? d.question : null);
+    if (requireItems && (!question.prompt || question.options.length < 2)) {
+      throw new ApiError(`บทสนทนาที่ ${n}: ต้องกรอกคำถาม และตัวเลือกอย่างน้อย 2 ตัวเลือก`, 422);
+    }
+    return { lines, question };
+  });
 
   return {
     title,
@@ -86,8 +109,7 @@ function validatePayload(body, { requireItems = true } = {}) {
     level,
     speakerA,
     speakerB,
-    dialogue: cleanDialogue,
-    questions: cleanQuestions,
+    dialogues,
     status: body.status === 'published' ? 'published' : 'draft',
   };
 }
@@ -99,6 +121,18 @@ router.get('/', async (req, res) => {
     const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     docs.sort((a, b) => (a.createdAt?.seconds ?? 0) - (b.createdAt?.seconds ?? 0));
     return res.json({ success: true, count: docs.length, data: docs });
+  } catch (err) {
+    return sendError(res, err);
+  }
+});
+
+// GET /api/admin/listening-reading-sets/:id — ดึงชุดเดียว (สำหรับหน้าแก้ไข)
+router.get('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const snap = await db.collection('exercises').doc(id).get();
+    if (!snap.exists) throw new ApiError(`ไม่พบชุด id=${id}`, 404);
+    return res.json({ success: true, data: { id: snap.id, ...snap.data() } });
   } catch (err) {
     return sendError(res, err);
   }

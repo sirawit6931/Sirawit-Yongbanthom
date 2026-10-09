@@ -12,268 +12,22 @@ initializeApp({ credential: cert(serviceAccount) });
 const db = getFirestore();
 
 // ══════════════════════════════════════════════════════════════════════════════
-// Oxford 3000 — A1 Level (100 คำ)
+// Oxford 3000 — A1 + A2 (1,772 คำ: A1 900 / A2 872)
+// source: data/oxford_vocabulary.json (สร้างด้วย scripts/build_seed_data.py)
 // ══════════════════════════════════════════════════════════════════════════════
-const OXFORD_A1 = [
-  { id:'a1_001', wordEN:'apple',       wordTH:'แอปเปิ้ล',         level:'A1', cefrLevel:'A1' },
-  { id:'a1_002', wordEN:'bag',         wordTH:'กระเป๋า',           level:'A1', cefrLevel:'A1' },
-  { id:'a1_003', wordEN:'book',        wordTH:'หนังสือ',            level:'A1', cefrLevel:'A1' },
-  { id:'a1_004', wordEN:'cat',         wordTH:'แมว',               level:'A1', cefrLevel:'A1' },
-  { id:'a1_005', wordEN:'day',         wordTH:'วัน',               level:'A1', cefrLevel:'A1' },
-  { id:'a1_006', wordEN:'dog',         wordTH:'สุนัข',             level:'A1', cefrLevel:'A1' },
-  { id:'a1_007', wordEN:'door',        wordTH:'ประตู',              level:'A1', cefrLevel:'A1' },
-  { id:'a1_008', wordEN:'egg',         wordTH:'ไข่',               level:'A1', cefrLevel:'A1' },
-  { id:'a1_009', wordEN:'family',      wordTH:'ครอบครัว',           level:'A1', cefrLevel:'A1' },
-  { id:'a1_010', wordEN:'fish',        wordTH:'ปลา',               level:'A1', cefrLevel:'A1' },
-  { id:'a1_011', wordEN:'food',        wordTH:'อาหาร',             level:'A1', cefrLevel:'A1' },
-  { id:'a1_012', wordEN:'friend',      wordTH:'เพื่อน',             level:'A1', cefrLevel:'A1' },
-  { id:'a1_013', wordEN:'girl',        wordTH:'เด็กผู้หญิง',        level:'A1', cefrLevel:'A1' },
-  { id:'a1_014', wordEN:'hand',        wordTH:'มือ',               level:'A1', cefrLevel:'A1' },
-  { id:'a1_015', wordEN:'happy',       wordTH:'มีความสุข',          level:'A1', cefrLevel:'A1' },
-  { id:'a1_016', wordEN:'house',       wordTH:'บ้าน',              level:'A1', cefrLevel:'A1' },
-  { id:'a1_017', wordEN:'love',        wordTH:'รัก',               level:'A1', cefrLevel:'A1' },
-  { id:'a1_018', wordEN:'man',         wordTH:'ผู้ชาย',             level:'A1', cefrLevel:'A1' },
-  { id:'a1_019', wordEN:'milk',        wordTH:'นม',                level:'A1', cefrLevel:'A1' },
-  { id:'a1_020', wordEN:'money',       wordTH:'เงิน',              level:'A1', cefrLevel:'A1' },
-  { id:'a1_021', wordEN:'mother',      wordTH:'แม่',               level:'A1', cefrLevel:'A1' },
-  { id:'a1_022', wordEN:'name',        wordTH:'ชื่อ',              level:'A1', cefrLevel:'A1' },
-  { id:'a1_023', wordEN:'night',       wordTH:'กลางคืน',            level:'A1', cefrLevel:'A1' },
-  { id:'a1_024', wordEN:'one',         wordTH:'หนึ่ง',              level:'A1', cefrLevel:'A1' },
-  { id:'a1_025', wordEN:'people',      wordTH:'ผู้คน',              level:'A1', cefrLevel:'A1' },
-  { id:'a1_026', wordEN:'phone',       wordTH:'โทรศัพท์',           level:'A1', cefrLevel:'A1' },
-  { id:'a1_027', wordEN:'rain',        wordTH:'ฝน',                level:'A1', cefrLevel:'A1' },
-  { id:'a1_028', wordEN:'read',        wordTH:'อ่าน',              level:'A1', cefrLevel:'A1' },
-  { id:'a1_029', wordEN:'road',        wordTH:'ถนน',               level:'A1', cefrLevel:'A1' },
-  { id:'a1_030', wordEN:'room',        wordTH:'ห้อง',              level:'A1', cefrLevel:'A1' },
-  { id:'a1_031', wordEN:'school',      wordTH:'โรงเรียน',           level:'A1', cefrLevel:'A1' },
-  { id:'a1_032', wordEN:'sister',      wordTH:'พี่น้องสาว',         level:'A1', cefrLevel:'A1' },
-  { id:'a1_033', wordEN:'sky',         wordTH:'ท้องฟ้า',            level:'A1', cefrLevel:'A1' },
-  { id:'a1_034', wordEN:'small',       wordTH:'เล็ก',              level:'A1', cefrLevel:'A1' },
-  { id:'a1_035', wordEN:'sun',         wordTH:'ดวงอาทิตย์',         level:'A1', cefrLevel:'A1' },
-  { id:'a1_036', wordEN:'teacher',     wordTH:'ครู',               level:'A1', cefrLevel:'A1' },
-  { id:'a1_037', wordEN:'time',        wordTH:'เวลา',              level:'A1', cefrLevel:'A1' },
-  { id:'a1_038', wordEN:'tree',        wordTH:'ต้นไม้',             level:'A1', cefrLevel:'A1' },
-  { id:'a1_039', wordEN:'two',         wordTH:'สอง',               level:'A1', cefrLevel:'A1' },
-  { id:'a1_040', wordEN:'water',       wordTH:'น้ำ',               level:'A1', cefrLevel:'A1' },
-  { id:'a1_041', wordEN:'woman',       wordTH:'ผู้หญิง',            level:'A1', cefrLevel:'A1' },
-  { id:'a1_042', wordEN:'work',        wordTH:'งาน / ทำงาน',        level:'A1', cefrLevel:'A1' },
-  { id:'a1_043', wordEN:'year',        wordTH:'ปี',                level:'A1', cefrLevel:'A1' },
-  { id:'a1_044', wordEN:'young',       wordTH:'อายุน้อย',           level:'A1', cefrLevel:'A1' },
-  { id:'a1_045', wordEN:'boy',         wordTH:'เด็กผู้ชาย',         level:'A1', cefrLevel:'A1' },
-  { id:'a1_046', wordEN:'big',         wordTH:'ใหญ่',              level:'A1', cefrLevel:'A1' },
-  { id:'a1_047', wordEN:'good',        wordTH:'ดี',                level:'A1', cefrLevel:'A1' },
-  { id:'a1_048', wordEN:'new',         wordTH:'ใหม่',              level:'A1', cefrLevel:'A1' },
-  { id:'a1_049', wordEN:'old',         wordTH:'เก่า / แก่',         level:'A1', cefrLevel:'A1' },
-  { id:'a1_050', wordEN:'red',         wordTH:'สีแดง',             level:'A1', cefrLevel:'A1' },
-  { id:'a1_051', wordEN:'white',       wordTH:'สีขาว',             level:'A1', cefrLevel:'A1' },
-  { id:'a1_052', wordEN:'black',       wordTH:'สีดำ',              level:'A1', cefrLevel:'A1' },
-  { id:'a1_053', wordEN:'blue',        wordTH:'สีน้ำเงิน',          level:'A1', cefrLevel:'A1' },
-  { id:'a1_054', wordEN:'green',       wordTH:'สีเขียว',            level:'A1', cefrLevel:'A1' },
-  { id:'a1_055', wordEN:'open',        wordTH:'เปิด',              level:'A1', cefrLevel:'A1' },
-  { id:'a1_056', wordEN:'close',       wordTH:'ปิด',               level:'A1', cefrLevel:'A1' },
-  { id:'a1_057', wordEN:'run',         wordTH:'วิ่ง',               level:'A1', cefrLevel:'A1' },
-  { id:'a1_058', wordEN:'walk',        wordTH:'เดิน',              level:'A1', cefrLevel:'A1' },
-  { id:'a1_059', wordEN:'eat',         wordTH:'กิน',               level:'A1', cefrLevel:'A1' },
-  { id:'a1_060', wordEN:'drink',       wordTH:'ดื่ม',              level:'A1', cefrLevel:'A1' },
-  { id:'a1_061', wordEN:'sleep',       wordTH:'นอนหลับ',            level:'A1', cefrLevel:'A1' },
-  { id:'a1_062', wordEN:'play',        wordTH:'เล่น',              level:'A1', cefrLevel:'A1' },
-  { id:'a1_063', wordEN:'write',       wordTH:'เขียน',             level:'A1', cefrLevel:'A1' },
-  { id:'a1_064', wordEN:'speak',       wordTH:'พูด',               level:'A1', cefrLevel:'A1' },
-  { id:'a1_065', wordEN:'listen',      wordTH:'ฟัง',               level:'A1', cefrLevel:'A1' },
-  { id:'a1_066', wordEN:'go',          wordTH:'ไป',                level:'A1', cefrLevel:'A1' },
-  { id:'a1_067', wordEN:'come',        wordTH:'มา',                level:'A1', cefrLevel:'A1' },
-  { id:'a1_068', wordEN:'see',         wordTH:'เห็น',              level:'A1', cefrLevel:'A1' },
-  { id:'a1_069', wordEN:'know',        wordTH:'รู้',               level:'A1', cefrLevel:'A1' },
-  { id:'a1_070', wordEN:'like',        wordTH:'ชอบ',               level:'A1', cefrLevel:'A1' },
-  { id:'a1_071', wordEN:'father',      wordTH:'พ่อ',               level:'A1', cefrLevel:'A1' },
-  { id:'a1_072', wordEN:'brother',     wordTH:'พี่น้องชาย',         level:'A1', cefrLevel:'A1' },
-  { id:'a1_073', wordEN:'child',       wordTH:'เด็ก',              level:'A1', cefrLevel:'A1' },
-  { id:'a1_074', wordEN:'city',        wordTH:'เมือง',             level:'A1', cefrLevel:'A1' },
-  { id:'a1_075', wordEN:'car',         wordTH:'รถยนต์',            level:'A1', cefrLevel:'A1' },
-  { id:'a1_076', wordEN:'chair',       wordTH:'เก้าอี้',            level:'A1', cefrLevel:'A1' },
-  { id:'a1_077', wordEN:'table',       wordTH:'โต๊ะ',              level:'A1', cefrLevel:'A1' },
-  { id:'a1_078', wordEN:'bed',         wordTH:'เตียง',             level:'A1', cefrLevel:'A1' },
-  { id:'a1_079', wordEN:'window',      wordTH:'หน้าต่าง',           level:'A1', cefrLevel:'A1' },
-  { id:'a1_080', wordEN:'garden',      wordTH:'สวน',               level:'A1', cefrLevel:'A1' },
-  { id:'a1_081', wordEN:'morning',     wordTH:'ตอนเช้า',            level:'A1', cefrLevel:'A1' },
-  { id:'a1_082', wordEN:'afternoon',   wordTH:'ตอนบ่าย',            level:'A1', cefrLevel:'A1' },
-  { id:'a1_083', wordEN:'evening',     wordTH:'ตอนเย็น',            level:'A1', cefrLevel:'A1' },
-  { id:'a1_084', wordEN:'today',       wordTH:'วันนี้',             level:'A1', cefrLevel:'A1' },
-  { id:'a1_085', wordEN:'tomorrow',    wordTH:'พรุ่งนี้',            level:'A1', cefrLevel:'A1' },
-  { id:'a1_086', wordEN:'yesterday',   wordTH:'เมื่อวาน',           level:'A1', cefrLevel:'A1' },
-  { id:'a1_087', wordEN:'beautiful',   wordTH:'สวยงาม',            level:'A1', cefrLevel:'A1' },
-  { id:'a1_088', wordEN:'cold',        wordTH:'เย็น / หนาว',        level:'A1', cefrLevel:'A1' },
-  { id:'a1_089', wordEN:'hot',         wordTH:'ร้อน',              level:'A1', cefrLevel:'A1' },
-  { id:'a1_090', wordEN:'fast',        wordTH:'เร็ว',              level:'A1', cefrLevel:'A1' },
-  { id:'a1_091', wordEN:'slow',        wordTH:'ช้า',               level:'A1', cefrLevel:'A1' },
-  { id:'a1_092', wordEN:'long',        wordTH:'ยาว',               level:'A1', cefrLevel:'A1' },
-  { id:'a1_093', wordEN:'short',       wordTH:'สั้น',              level:'A1', cefrLevel:'A1' },
-  { id:'a1_094', wordEN:'high',        wordTH:'สูง',               level:'A1', cefrLevel:'A1' },
-  { id:'a1_095', wordEN:'low',         wordTH:'ต่ำ',               level:'A1', cefrLevel:'A1' },
-  { id:'a1_096', wordEN:'first',       wordTH:'แรก / อันดับหนึ่ง', level:'A1', cefrLevel:'A1' },
-  { id:'a1_097', wordEN:'last',        wordTH:'สุดท้าย',            level:'A1', cefrLevel:'A1' },
-  { id:'a1_098', wordEN:'rice',        wordTH:'ข้าว',              level:'A1', cefrLevel:'A1' },
-  { id:'a1_099', wordEN:'bread',       wordTH:'ขนมปัง',            level:'A1', cefrLevel:'A1' },
-  { id:'a1_100', wordEN:'orange',      wordTH:'ส้ม',               level:'A1', cefrLevel:'A1' },
-];
+const ALL_VOCAB = require('./data/oxford_vocabulary.json');
+const OXFORD_A1 = ALL_VOCAB.filter((v) => v.cefrLevel === 'A1');
+const OXFORD_A2 = ALL_VOCAB.filter((v) => v.cefrLevel === 'A2');
 
 // ══════════════════════════════════════════════════════════════════════════════
-// Oxford 3000 — A2 Level (100 คำ)
+// ชุดแบบฝึกหัดคำศัพท์ — ดึงจาก scripts/vocabSetsData.js (single source of truth)
+// เลิกใช้ buildVocabExercises() ตัวเก่าแล้ว เพราะ:
+//   - sentence เป็น template ทุกข้อ (ไม่ใช่ประโยคตัวอย่างที่อ่านได้)
+//   - ไม่ผูก spellingWords / listenRepeatWords / fillInBlankSentences
+//     ทำให้ learningEngine สุ่ม type ของคำถามเอง อาจได้ชุดที่ไม่มีด่านพูดเลย
+// เขียนชุดลง Firestore แยกได้ที่: node scripts/seedVocabSets.js
 // ══════════════════════════════════════════════════════════════════════════════
-const OXFORD_A2 = [
-  { id:'a2_001', wordEN:'accident',    wordTH:'อุบัติเหตุ',         level:'A2', cefrLevel:'A2' },
-  { id:'a2_002', wordEN:'address',     wordTH:'ที่อยู่',             level:'A2', cefrLevel:'A2' },
-  { id:'a2_003', wordEN:'advice',      wordTH:'คำแนะนำ',            level:'A2', cefrLevel:'A2' },
-  { id:'a2_004', wordEN:'airport',     wordTH:'สนามบิน',            level:'A2', cefrLevel:'A2' },
-  { id:'a2_005', wordEN:'angry',       wordTH:'โกรธ',              level:'A2', cefrLevel:'A2' },
-  { id:'a2_006', wordEN:'animal',      wordTH:'สัตว์',              level:'A2', cefrLevel:'A2' },
-  { id:'a2_007', wordEN:'answer',      wordTH:'คำตอบ / ตอบ',        level:'A2', cefrLevel:'A2' },
-  { id:'a2_008', wordEN:'arm',         wordTH:'แขน',               level:'A2', cefrLevel:'A2' },
-  { id:'a2_009', wordEN:'arrive',      wordTH:'มาถึง',              level:'A2', cefrLevel:'A2' },
-  { id:'a2_010', wordEN:'ask',         wordTH:'ถาม',               level:'A2', cefrLevel:'A2' },
-  { id:'a2_011', wordEN:'bank',        wordTH:'ธนาคาร',             level:'A2', cefrLevel:'A2' },
-  { id:'a2_012', wordEN:'bathroom',    wordTH:'ห้องน้ำ',             level:'A2', cefrLevel:'A2' },
-  { id:'a2_013', wordEN:'beach',       wordTH:'ชายหาด',             level:'A2', cefrLevel:'A2' },
-  { id:'a2_014', wordEN:'begin',       wordTH:'เริ่มต้น',            level:'A2', cefrLevel:'A2' },
-  { id:'a2_015', wordEN:'believe',     wordTH:'เชื่อ',              level:'A2', cefrLevel:'A2' },
-  { id:'a2_016', wordEN:'bird',        wordTH:'นก',                level:'A2', cefrLevel:'A2' },
-  { id:'a2_017', wordEN:'body',        wordTH:'ร่างกาย',            level:'A2', cefrLevel:'A2' },
-  { id:'a2_018', wordEN:'boring',      wordTH:'น่าเบื่อ',            level:'A2', cefrLevel:'A2' },
-  { id:'a2_019', wordEN:'borrow',      wordTH:'ยืม',               level:'A2', cefrLevel:'A2' },
-  { id:'a2_020', wordEN:'bus',         wordTH:'รถบัส',              level:'A2', cefrLevel:'A2' },
-  { id:'a2_021', wordEN:'busy',        wordTH:'ยุ่ง',               level:'A2', cefrLevel:'A2' },
-  { id:'a2_022', wordEN:'buy',         wordTH:'ซื้อ',              level:'A2', cefrLevel:'A2' },
-  { id:'a2_023', wordEN:'call',        wordTH:'โทร / เรียก',         level:'A2', cefrLevel:'A2' },
-  { id:'a2_024', wordEN:'clean',       wordTH:'สะอาด / ทำความสะอาด', level:'A2', cefrLevel:'A2' },
-  { id:'a2_025', wordEN:'clock',       wordTH:'นาฬิกา',             level:'A2', cefrLevel:'A2' },
-  { id:'a2_026', wordEN:'colour',      wordTH:'สี',                level:'A2', cefrLevel:'A2' },
-  { id:'a2_027', wordEN:'cook',        wordTH:'ทำอาหาร / พ่อครัว',   level:'A2', cefrLevel:'A2' },
-  { id:'a2_028', wordEN:'correct',     wordTH:'ถูกต้อง',            level:'A2', cefrLevel:'A2' },
-  { id:'a2_029', wordEN:'country',     wordTH:'ประเทศ',             level:'A2', cefrLevel:'A2' },
-  { id:'a2_030', wordEN:'dance',       wordTH:'เต้นรำ',             level:'A2', cefrLevel:'A2' },
-  { id:'a2_031', wordEN:'decide',      wordTH:'ตัดสินใจ',            level:'A2', cefrLevel:'A2' },
-  { id:'a2_032', wordEN:'different',   wordTH:'แตกต่าง',            level:'A2', cefrLevel:'A2' },
-  { id:'a2_033', wordEN:'difficult',   wordTH:'ยาก',               level:'A2', cefrLevel:'A2' },
-  { id:'a2_034', wordEN:'dinner',      wordTH:'อาหารเย็น',           level:'A2', cefrLevel:'A2' },
-  { id:'a2_035', wordEN:'dirty',       wordTH:'สกปรก',             level:'A2', cefrLevel:'A2' },
-  { id:'a2_036', wordEN:'dream',       wordTH:'ความฝัน / ฝัน',       level:'A2', cefrLevel:'A2' },
-  { id:'a2_037', wordEN:'drive',       wordTH:'ขับรถ',             level:'A2', cefrLevel:'A2' },
-  { id:'a2_038', wordEN:'early',       wordTH:'แต่เช้า / เร็ว',       level:'A2', cefrLevel:'A2' },
-  { id:'a2_039', wordEN:'easy',        wordTH:'ง่าย',              level:'A2', cefrLevel:'A2' },
-  { id:'a2_040', wordEN:'enjoy',       wordTH:'สนุก / ชอบ',          level:'A2', cefrLevel:'A2' },
-  { id:'a2_041', wordEN:'enter',       wordTH:'เข้า',              level:'A2', cefrLevel:'A2' },
-  { id:'a2_042', wordEN:'example',     wordTH:'ตัวอย่าง',            level:'A2', cefrLevel:'A2' },
-  { id:'a2_043', wordEN:'excited',     wordTH:'ตื่นเต้น',            level:'A2', cefrLevel:'A2' },
-  { id:'a2_044', wordEN:'exercise',    wordTH:'ออกกำลังกาย',         level:'A2', cefrLevel:'A2' },
-  { id:'a2_045', wordEN:'expensive',   wordTH:'แพง',               level:'A2', cefrLevel:'A2' },
-  { id:'a2_046', wordEN:'face',        wordTH:'ใบหน้า',             level:'A2', cefrLevel:'A2' },
-  { id:'a2_047', wordEN:'feel',        wordTH:'รู้สึก',             level:'A2', cefrLevel:'A2' },
-  { id:'a2_048', wordEN:'finish',      wordTH:'เสร็จ / จบ',          level:'A2', cefrLevel:'A2' },
-  { id:'a2_049', wordEN:'flower',      wordTH:'ดอกไม้',             level:'A2', cefrLevel:'A2' },
-  { id:'a2_050', wordEN:'fly',         wordTH:'บิน',               level:'A2', cefrLevel:'A2' },
-  { id:'a2_051', wordEN:'forget',      wordTH:'ลืม',               level:'A2', cefrLevel:'A2' },
-  { id:'a2_052', wordEN:'free',        wordTH:'ฟรี / อิสระ',         level:'A2', cefrLevel:'A2' },
-  { id:'a2_053', wordEN:'fruit',       wordTH:'ผลไม้',             level:'A2', cefrLevel:'A2' },
-  { id:'a2_054', wordEN:'fun',         wordTH:'สนุกสนาน',           level:'A2', cefrLevel:'A2' },
-  { id:'a2_055', wordEN:'give',        wordTH:'ให้',               level:'A2', cefrLevel:'A2' },
-  { id:'a2_056', wordEN:'grade',       wordTH:'คะแนน / เกรด',        level:'A2', cefrLevel:'A2' },
-  { id:'a2_057', wordEN:'help',        wordTH:'ช่วย',              level:'A2', cefrLevel:'A2' },
-  { id:'a2_058', wordEN:'hobby',       wordTH:'งานอดิเรก',           level:'A2', cefrLevel:'A2' },
-  { id:'a2_059', wordEN:'holiday',     wordTH:'วันหยุด',             level:'A2', cefrLevel:'A2' },
-  { id:'a2_060', wordEN:'hospital',    wordTH:'โรงพยาบาล',          level:'A2', cefrLevel:'A2' },
-  { id:'a2_061', wordEN:'hotel',       wordTH:'โรงแรม',             level:'A2', cefrLevel:'A2' },
-  { id:'a2_062', wordEN:'hungry',      wordTH:'หิว',               level:'A2', cefrLevel:'A2' },
-  { id:'a2_063', wordEN:'important',   wordTH:'สำคัญ',             level:'A2', cefrLevel:'A2' },
-  { id:'a2_064', wordEN:'interesting', wordTH:'น่าสนใจ',            level:'A2', cefrLevel:'A2' },
-  { id:'a2_065', wordEN:'invite',      wordTH:'เชิญ',              level:'A2', cefrLevel:'A2' },
-  { id:'a2_066', wordEN:'join',        wordTH:'เข้าร่วม',            level:'A2', cefrLevel:'A2' },
-  { id:'a2_067', wordEN:'journey',     wordTH:'การเดินทาง',          level:'A2', cefrLevel:'A2' },
-  { id:'a2_068', wordEN:'jump',        wordTH:'กระโดด',             level:'A2', cefrLevel:'A2' },
-  { id:'a2_069', wordEN:'kind',        wordTH:'ใจดี / ประเภท',        level:'A2', cefrLevel:'A2' },
-  { id:'a2_070', wordEN:'language',    wordTH:'ภาษา',              level:'A2', cefrLevel:'A2' },
-  { id:'a2_071', wordEN:'learn',       wordTH:'เรียน',             level:'A2', cefrLevel:'A2' },
-  { id:'a2_072', wordEN:'leave',       wordTH:'ออกไป / ทิ้ง',         level:'A2', cefrLevel:'A2' },
-  { id:'a2_073', wordEN:'letter',      wordTH:'จดหมาย / ตัวอักษร',    level:'A2', cefrLevel:'A2' },
-  { id:'a2_074', wordEN:'library',     wordTH:'ห้องสมุด',            level:'A2', cefrLevel:'A2' },
-  { id:'a2_075', wordEN:'market',      wordTH:'ตลาด',              level:'A2', cefrLevel:'A2' },
-  { id:'a2_076', wordEN:'meal',        wordTH:'มื้ออาหาร',           level:'A2', cefrLevel:'A2' },
-  { id:'a2_077', wordEN:'message',     wordTH:'ข้อความ',            level:'A2', cefrLevel:'A2' },
-  { id:'a2_078', wordEN:'miss',        wordTH:'คิดถึง / พลาด',        level:'A2', cefrLevel:'A2' },
-  { id:'a2_079', wordEN:'mountain',    wordTH:'ภูเขา',             level:'A2', cefrLevel:'A2' },
-  { id:'a2_080', wordEN:'music',       wordTH:'ดนตรี',             level:'A2', cefrLevel:'A2' },
-  { id:'a2_081', wordEN:'need',        wordTH:'ต้องการ',            level:'A2', cefrLevel:'A2' },
-  { id:'a2_082', wordEN:'neighbour',   wordTH:'เพื่อนบ้าน',          level:'A2', cefrLevel:'A2' },
-  { id:'a2_083', wordEN:'newspaper',   wordTH:'หนังสือพิมพ์',         level:'A2', cefrLevel:'A2' },
-  { id:'a2_084', wordEN:'noise',       wordTH:'เสียงรบกวน',          level:'A2', cefrLevel:'A2' },
-  { id:'a2_085', wordEN:'office',      wordTH:'สำนักงาน',           level:'A2', cefrLevel:'A2' },
-  { id:'a2_086', wordEN:'park',        wordTH:'สวนสาธารณะ',          level:'A2', cefrLevel:'A2' },
-  { id:'a2_087', wordEN:'party',       wordTH:'งานปาร์ตี้',           level:'A2', cefrLevel:'A2' },
-  { id:'a2_088', wordEN:'passport',    wordTH:'หนังสือเดินทาง',       level:'A2', cefrLevel:'A2' },
-  { id:'a2_089', wordEN:'pay',         wordTH:'จ่ายเงิน',            level:'A2', cefrLevel:'A2' },
-  { id:'a2_090', wordEN:'picture',     wordTH:'รูปภาพ',             level:'A2', cefrLevel:'A2' },
-  { id:'a2_091', wordEN:'plan',        wordTH:'แผน / วางแผน',         level:'A2', cefrLevel:'A2' },
-  { id:'a2_092', wordEN:'popular',     wordTH:'เป็นที่นิยม',          level:'A2', cefrLevel:'A2' },
-  { id:'a2_093', wordEN:'practice',    wordTH:'ฝึกฝน',             level:'A2', cefrLevel:'A2' },
-  { id:'a2_094', wordEN:'prepare',     wordTH:'เตรียม',             level:'A2', cefrLevel:'A2' },
-  { id:'a2_095', wordEN:'price',       wordTH:'ราคา',              level:'A2', cefrLevel:'A2' },
-  { id:'a2_096', wordEN:'problem',     wordTH:'ปัญหา',             level:'A2', cefrLevel:'A2' },
-  { id:'a2_097', wordEN:'programme',   wordTH:'โปรแกรม',            level:'A2', cefrLevel:'A2' },
-  { id:'a2_098', wordEN:'quiet',       wordTH:'เงียบ',             level:'A2', cefrLevel:'A2' },
-  { id:'a2_099', wordEN:'receive',     wordTH:'รับ',               level:'A2', cefrLevel:'A2' },
-  { id:'a2_100', wordEN:'remember',    wordTH:'จำ / จำได้',           level:'A2', cefrLevel:'A2' },
-];
-
-// ══════════════════════════════════════════════════════════════════════════════
-// รวมคำศัพท์ทั้งหมด
-// ══════════════════════════════════════════════════════════════════════════════
-const ALL_VOCAB = [...OXFORD_A1, ...OXFORD_A2]; // CEFR A1–A2 เท่านั้น (scope)
-
-// ══════════════════════════════════════════════════════════════════════════════
-// Helper: สร้าง exercise sets อัตโนมัติตามจำนวนข้อที่กำหนด
-// ══════════════════════════════════════════════════════════════════════════════
-// chunkSizes: อาร์เรย์กำหนดจำนวนข้อของแต่ละชุด เช่น [10, 15, 10, 15, 10]
-// รวมต้องไม่เกิน vocabList.length
-function buildVocabExercises(vocabList, level, chunkSizes = [10]) {
-  const sets = [];
-  let offset = 0;
-  for (let s = 0; s < chunkSizes.length; s++) {
-    const chunkSize = chunkSizes[s];
-    const chunk = vocabList.slice(offset, offset + chunkSize);
-    if (chunk.length === 0) break; // คำไม่พอ → หยุด
-
-    const setNum = s + 1;
-    const allOtherEN = vocabList
-      .filter((_, idx) => idx < offset || idx >= offset + chunkSize)
-      .map((v) => v.wordEN);
-
-    const items = chunk.map((v) => {
-      // สุ่ม distractors 2 คำจาก level เดียวกัน
-      const pool  = allOtherEN.filter((w) => w !== v.wordEN);
-      const dist  = pool.sort(() => 0.5 - Math.random()).slice(0, 2);
-      return {
-        wordId:      v.id,
-        wordEN:      v.wordEN,
-        wordTH:      v.wordTH,
-        sentence:    `I know the word "${v.wordEN}".`,
-        sentenceTH:  `ฉันรู้จักคำว่า "${v.wordTH}"`,
-        distractors: dist,
-      };
-    });
-
-    sets.push({
-      id:          `vex_${level.toLowerCase()}_${String(setNum).padStart(2,'0')}`,
-      category:    'vocab',
-      level,
-      title:       `คำศัพท์ ${level} ชุดที่ ${setNum}`,
-      description: `คำศัพท์ Oxford 3000 ระดับ ${level} ชุดที่ ${setNum}`,
-      ttsSystem:   'female',
-      items,
-    });
-
-    offset += chunkSize;
-  }
-  return sets;
-}
+const { buildAllVocabSetDocs } = require('./scripts/vocabSetsData');
 
 // ══════════════════════════════════════════════════════════════════════════════
 // ข้อมูล: ชุดแบบฝึกหัด Tense
@@ -442,89 +196,134 @@ const TENSE_EXERCISES = [
 // ══════════════════════════════════════════════════════════════════════════════
 const LISTENING_EXERCISES = [
   {
-    id: 'lex001', category: 'listening',
+    id: 'lex001', category: 'listening', level: 'A1',
     title: 'การฟังและการดู Tense ชุดที่ 1', description: 'บทสนทนาในชีวิตประจำวัน',
-    ttsSystem: 'female',
-    dialogue: [
-      { speaker:'Anna',  side:'left',  text:'Hi! How are you today?' },
-      { speaker:'David', side:'right', text:'I am fine, thank you! And you?' },
-      { speaker:'Anna',  side:'left',  text:'I am great! What do you usually do on weekends?' },
-      { speaker:'David', side:'right', text:'I like to go to the park and read books.' },
-      { speaker:'Anna',  side:'left',  text:'That sounds fun! I usually go shopping.' },
-    ],
-    questions: [
+    speakerA: { name: 'Anna', ttsVoice: 'female' },
+    speakerB: { name: 'David', ttsVoice: 'male' },
+    dialogues: [
       {
-        question: 'David ทำอะไรในวันหยุดสุดสัปดาห์?',
-        choices:  ['ไปสวนสาธารณะและอ่านหนังสือ','ไปช้อปปิ้ง','ดูหนัง'],
-        answer:   'ไปสวนสาธารณะและอ่านหนังสือ',
+        lines: [
+          { speaker:'A', text:'Hi! How are you today?' },
+          { speaker:'B', text:'I am fine, thank you! And you?' },
+          { speaker:'A', text:'I am great! What do you usually do on weekends?' },
+          { speaker:'B', text:'I like to go to the park and read books.' },
+          { speaker:'A', text:'That sounds fun! I usually go shopping.' },
+        ],
+        question: {
+          prompt: 'David ทำอะไรในวันหยุดสุดสัปดาห์?',
+          options: ['ไปสวนสาธารณะและอ่านหนังสือ','ไปช้อปปิ้ง','ดูหนัง','ไปว่ายน้ำ'],
+          correctIndex: 0,
+        },
       },
       {
-        question: 'Anna ทำอะไรในวันหยุดสุดสัปดาห์?',
-        choices:  ['ไปช้อปปิ้ง','อ่านหนังสือ','ไปสวนสาธารณะ'],
-        answer:   'ไปช้อปปิ้ง',
+        lines: [
+          { speaker:'A', text:'Do you like reading books?' },
+          { speaker:'B', text:'Yes, I read every evening before bed.' },
+        ],
+        question: {
+          prompt: 'ผู้พูดอ่านหนังสือตอนไหน?',
+          options: ['ตอนเช้า','ก่อนนอนทุกคืน','ตอนกลางวัน','ไม่เคยอ่าน'],
+          correctIndex: 1,
+        },
       },
       {
-        question: 'บทสนทนานี้ใช้ Tense ใดเป็นหลัก?',
-        choices:  ['Present Simple','Past Simple','Future Simple'],
-        answer:   'Present Simple',
+        lines: [
+          { speaker:'A', text:'What does she do every day?' },
+          { speaker:'B', text:'She goes to school every day.' },
+        ],
+        question: {
+          prompt: 'บทสนทนานี้ใช้ Tense ใดเป็นหลัก?',
+          options: ['Present Simple','Past Simple','Future Simple','Present Continuous'],
+          correctIndex: 0,
+        },
       },
     ],
   },
   {
-    id: 'lex002', category: 'listening',
+    id: 'lex002', category: 'listening', level: 'A2',
     title: 'การฟังและการดู Tense ชุดที่ 2', description: 'เล่าเรื่องในอดีต',
-    ttsSystem: 'female',
-    dialogue: [
-      { speaker:'Sara', side:'left',  text:'Where did you go last weekend?' },
-      { speaker:'Tom',  side:'right', text:'I went to the beach with my family.' },
-      { speaker:'Sara', side:'left',  text:'Did you swim in the sea?' },
-      { speaker:'Tom',  side:'right', text:'Yes, I swam for two hours! It was amazing!' },
-      { speaker:'Sara', side:'left',  text:'That sounds wonderful! I stayed home last weekend.' },
-    ],
-    questions: [
+    speakerA: { name: 'Sara', ttsVoice: 'female' },
+    speakerB: { name: 'Tom', ttsVoice: 'male' },
+    dialogues: [
       {
-        question: 'Tom ไปที่ไหนสุดสัปดาห์ที่ผ่านมา?',
-        choices:  ['ชายหาด','ภูเขา','ห้างสรรพสินค้า'],
-        answer:   'ชายหาด',
+        lines: [
+          { speaker:'A', text:'Where did you go last weekend?' },
+          { speaker:'B', text:'I went to the beach with my family.' },
+          { speaker:'A', text:'Did you swim in the sea?' },
+          { speaker:'B', text:'Yes, I swam for two hours! It was amazing!' },
+          { speaker:'A', text:'That sounds wonderful! I stayed home last weekend.' },
+        ],
+        question: {
+          prompt: 'Tom ไปที่ไหนสุดสัปดาห์ที่ผ่านมา?',
+          options: ['ชายหาด','ภูเขา','ห้างสรรพสินค้า','สวนสาธารณะ'],
+          correctIndex: 0,
+        },
       },
       {
-        question: 'Sara ทำอะไรสุดสัปดาห์ที่ผ่านมา?',
-        choices:  ['อยู่บ้าน','ไปชายหาด','ไปช้อปปิ้ง'],
-        answer:   'อยู่บ้าน',
+        lines: [
+          { speaker:'A', text:'What did you eat yesterday?' },
+          { speaker:'B', text:'I ate rice with my family.' },
+        ],
+        question: {
+          prompt: 'ผู้พูดกินอะไรเมื่อวาน?',
+          options: ['ข้าว','ก๋วยเตี๋ยว','พิซซ่า','สลัด'],
+          correctIndex: 0,
+        },
       },
       {
-        question: 'บทสนทนานี้ใช้ Tense ใดเป็นหลัก?',
-        choices:  ['Past Simple','Present Simple','Future Simple'],
-        answer:   'Past Simple',
+        lines: [
+          { speaker:'A', text:'When did they play football?' },
+          { speaker:'B', text:'They played football yesterday.' },
+        ],
+        question: {
+          prompt: 'บทสนทนานี้ใช้ Tense ใดเป็นหลัก?',
+          options: ['Past Simple','Present Simple','Future Simple','Present Continuous'],
+          correctIndex: 0,
+        },
       },
     ],
   },
   {
-    id: 'lex003', category: 'listening',
+    id: 'lex003', category: 'listening', level: 'A2',
     title: 'การฟังและการดู Tense ชุดที่ 3', description: 'แผนสำหรับอนาคต',
-    ttsSystem: 'female',
-    dialogue: [
-      { speaker:'Mike', side:'left',  text:'What will you do next summer?' },
-      { speaker:'Lisa', side:'right', text:'I will travel to Japan with my friends.' },
-      { speaker:'Mike', side:'left',  text:'That\'s exciting! Will you learn Japanese?' },
-      { speaker:'Lisa', side:'right', text:'Yes, I will take a short language course before I go.' },
-      { speaker:'Mike', side:'left',  text:'I will visit you there if I can!' },
-    ],
-    questions: [
+    speakerA: { name: 'Mike', ttsVoice: 'male' },
+    speakerB: { name: 'Lisa', ttsVoice: 'female' },
+    dialogues: [
       {
-        question: 'Lisa จะทำอะไรในฤดูร้อนหน้า?',
-        choices:  ['เดินทางไปญี่ปุ่น','เรียนภาษาจีน','อยู่บ้าน'],
-        answer:   'เดินทางไปญี่ปุ่น',
+        lines: [
+          { speaker:'A', text:'What will you do next summer?' },
+          { speaker:'B', text:'I will travel to Japan with my friends.' },
+          { speaker:'A', text:'That is exciting! Will you learn Japanese?' },
+          { speaker:'B', text:'Yes, I will take a short language course before I go.' },
+          { speaker:'A', text:'I will visit you there if I can!' },
+        ],
+        question: {
+          prompt: 'Lisa จะทำอะไรในฤดูร้อนหน้า?',
+          options: ['เดินทางไปญี่ปุ่น','เรียนภาษาจีน','อยู่บ้าน','ไปทำงาน'],
+          correctIndex: 0,
+        },
       },
       {
-        question: 'Lisa จะเรียนอะไรก่อนเดินทาง?',
-        choices:  ['คอร์สภาษาสั้นๆ','ว่ายน้ำ','ทำอาหาร'],
-        answer:   'คอร์สภาษาสั้นๆ',
+        lines: [
+          { speaker:'A', text:'What will you buy next month?' },
+          { speaker:'B', text:'I will buy a new phone next month.' },
+        ],
+        question: {
+          prompt: 'ผู้พูดจะซื้ออะไรเดือนหน้า?',
+          options: ['โทรศัพท์ใหม่','หนังสือ','รถ','คอมพิวเตอร์'],
+          correctIndex: 0,
+        },
       },
       {
-        question: 'บทสนทนานี้ใช้ Tense ใดเป็นหลัก?',
-        choices:  ['Future Simple','Past Simple','Present Continuous'],
-        answer:   'Future Simple',
+        lines: [
+          { speaker:'A', text:'Will you come to the party?' },
+          { speaker:'B', text:'Yes, I will be there tomorrow.' },
+        ],
+        question: {
+          prompt: 'บทสนทนานี้ใช้ Tense ใดเป็นหลัก?',
+          options: ['Future Simple','Past Simple','Present Continuous','Present Simple'],
+          correctIndex: 0,
+        },
       },
     ],
   },
@@ -543,7 +342,7 @@ async function seedVocabulary() {
     const batch = db.batch();
     for (const v of chunk) {
       const ref = db.collection('vocabulary').doc(v.id);
-      batch.set(ref, { wordEN: v.wordEN, wordTH: v.wordTH, cefrLevel: v.level, level: v.level, ttsVoice: '' });
+      batch.set(ref, { wordEN: v.wordEN, wordTH: v.wordTH, cefrLevel: v.cefrLevel, partOfSpeech: v.partOfSpeech || '', ttsVoice: '' }, { merge: true });
     }
     await batch.commit();
   }
@@ -553,10 +352,9 @@ async function seedVocabulary() {
 async function seedExercises() {
   console.log('\n📝 Seeding exercises...');
 
-  // สร้าง vocab exercise sets ให้เหลือ 5 ชุดพอดี ตามโครงสร้าง:
-  //   ชุดที่ 1: 10 ข้อ, ชุดที่ 2: 15 ข้อ, ชุดที่ 3: 10 ข้อ, ชุดที่ 4: 15 ข้อ, ชุดที่ 5: 10 ข้อ
-  // รวม = 60 คำ ใช้จาก OXFORD_A1 (มี 100 คำ พอสมควร)
-  const vocabSets = buildVocabExercises(OXFORD_A1, 'A1', [10, 15, 10, 15, 10]);
+  // vocab sets ทั้งหมดมาจาก scripts/vocabSetsData.js (10 ชุด: A1×5 / A2×5)
+  // แต่ละชุดครบทั้ง 4 ด่าน: matching / spelling / listenRepeat / fillBlank
+  const vocabSets = buildAllVocabSetDocs(ALL_VOCAB);
 
   const allExercises = [...vocabSets, ...TENSE_EXERCISES, ...LISTENING_EXERCISES];
 
@@ -584,7 +382,8 @@ async function seedExercises() {
     await batch.commit();
   }
 
-  console.log(`   ✅ vocab sets: ${vocabSets.length} ชุด (ข้อ: ${vocabSets.map(s => s.items.length).join(', ')}) — 5 ชุดพอดี`);
+  console.log(`   ✅ vocab sets: ${vocabSets.length} ชุด (A1:${vocabSets.filter(s=>s.level==='A1').length} / A2:${vocabSets.filter(s=>s.level==='A2').length}) — ข้อ: ${vocabSets.map(s => s.items.length).join(', ')}`);
+  console.log(`      ทุกชุดครบ 4 ด่าน — การ์ดรวม: ${vocabSets.map(s => s.totalQuestions).join(', ')}`);
   console.log(`   ✅ tense sets: ${TENSE_EXERCISES.length} ชุด`);
   console.log(`   ✅ listening sets: ${LISTENING_EXERCISES.length} ชุด`);
 }

@@ -157,7 +157,8 @@
 
 4. WHEN Speech_Recognizer ส่งผลลัพธ์และไม่มี transcript ใดผ่านเงื่อนไข substring match, THE Pronunciation_Stage SHALL แสดงสถานะ "ลองอีกครั้ง" (ไฮไลต์สีแดง) พร้อมข้อความที่ประเมินได้ และแสดงปุ่ม "ถัดไป"
 
-5. IF Speech_Recognizer ไม่รองรับบน platform ปัจจุบัน (SpeechRecognition = undefined) หรือเกิด error 'not-allowed', THEN THE Pronunciation_Stage SHALL แสดงข้อความแจ้งว่าไม่รองรับ และปุ่ม "ข้ามด่านนี้" ต้องยังคงใช้งานได้
+5. IF Speech_Recognizer ไม่รองรับบน platform ปัจจุบัน (Web: SpeechRecognition = undefined, Native: Expo Go หรือโมดูล `expo-speech-recognition` ยังไม่ได้เชื่อมต่อ) หรือเกิด error 'not-allowed', THEN THE Pronunciation_Stage SHALL แสดงข้อความแจ้งว่าไม่รองรับอย่างสุภาพ พร้อมปุ่ม "เปิดหน้าการตั้งค่า" (เมื่อเกิด error สิทธิ์ไมโครโฟน) และปุ่ม "ข้ามด่านนี้" ต้องยังคงใช้งานได้เสมอ
+*(สถาปัตยกรรมรองรับ 2 Strategy: Web ใช้ Web Speech API เดิม 100%, Native iOS/Android ใช้ `expo-speech-recognition` ผ่าน Strategy Pattern Adapter `useNativeSpeechRecognition.js`)*
 
 6. THE Pronunciation_Stage SHALL มีปุ่ม "ข้ามด่านนี้" ที่ใช้งานได้ตลอดเวลาใน stage โดยไม่ขึ้นกับผลการประเมินหรือ recStatus
 

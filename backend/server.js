@@ -21,6 +21,19 @@ app.use('/api', (req, res, next) => {
   next();
 });
 
+// ─── Admin Authentication (username/password → session token) ────────────────
+const adminAuthRoutes = require('./routes/adminAuthRoutes');
+const { requireAdmin } = require('./middleware/authMiddleware');
+
+// Global guard — คุม /api/admin/* ทั้งหมด (ยกเว้น login + bootstrap ที่ public)
+// ต้อง mount "ก่อน" router อื่นๆ เพราะ Express ไล่ match ตามลำดับ registration
+// req.path ใน middleware ที่ mount ที่ /api/admin คือ path ส่วนที่เหลือ เช่น '/login'
+app.use('/api/admin', (req, res, next) => {
+  if (req.path === '/login' || req.path === '/bootstrap') return next();
+  return requireAdmin(req, res, next);
+});
+app.use('/api/admin', adminAuthRoutes);
+
 // ─── Admin Exercise API (M1.3) ────────────────────────────────────────────────
 const adminExerciseRoutes = require('./routes/adminExerciseRoutes');
 app.use('/api/admin/exercises', adminExerciseRoutes);
@@ -34,9 +47,13 @@ app.use('/api/admin/tense-sets', adminTenseRoutes);
 
 const adminListeningReadingRoutes = require('./routes/adminListeningReadingRoutes');
 app.use('/api/admin/listening-reading-sets', adminListeningReadingRoutes);
+// --- Admin Statistics API (statistics section) - Admin SDK bypasses Firestore read rules ---
+// (statistics rules allow only the owner to read, so admin cannot read from client SDK)
+const adminStatisticsRoutes = require('./routes/adminStatisticsRoutes');
+app.use('/api/admin/statistics', adminStatisticsRoutes);
 
 // ─── Admin Users API (members list) — needs Auth + admin check ─────────────
-const { requireAdmin } = require('./middleware/authMiddleware');
+// (requireAdmin ถูก import ไว้ด้านบนแล้ว — ใช้ตัวเดียวกับ global guard)
 
 // ดึงผู้ใช้ทั้งหมดจาก Firebase Authentication (paginate ทีละ 1000)
 async function listAllAuthUsers() {
@@ -60,6 +77,46 @@ function authCreatedAt(u) {
   return { seconds: Math.floor(ms / 1000), milliseconds: ms };
 }
 
+// Normalize Firestore Timestamp ทุกรูปให้เป็น { seconds } เดียวก่อนส่ง JSON
+// — Admin SDK serialize Timestamp เป็น { _seconds, _nanoseconds } (underscore)
+//   ส่วน client SDK ใช้ { seconds, nanoseconds } → frontend อ่าน .seconds อย่างเดียวจึงเจอ
+//   undefined * 1000 = NaN = "Invalid Date" ในแถวที่มี profile doc
+// — รองรับเผื่อ: Timestamp instance (.toDate), ISO string, ตัวเลข millis/seconds
+function normalizeCreatedAt(ts) {
+  if (ts == null) return undefined;
+  if (typeof ts.toDate === 'function') {
+    try {
+      const ms = ts.toDate().getTime();
+      if (!Number.isNaN(ms)) return { seconds: Math.floor(ms / 1000) };
+    } catch { /* fallthrough */ }
+  }
+  if (typeof ts === 'object') {
+    const s = ts.seconds ?? ts._seconds;
+    if (Number.isFinite(Number(s))) return { seconds: Number(s) };
+    const ms = ts.milliseconds ?? ts._milliseconds;
+    if (Number.isFinite(Number(ms))) return { seconds: Math.floor(Number(ms) / 1000) };
+    const ns = ts.nanoseconds ?? ts._nanoseconds;
+    if (Number.isFinite(Number(s)) || Number.isFinite(Number(ns))) {
+      return { seconds: Number(s ?? 0) };
+    }
+    return undefined;
+  }
+  if (typeof ts === 'string') {
+    const ms = Date.parse(ts); // ISO 8601 เท่านั้น (ห้าม format ท้องถิ่น — Hermes/Android)
+    if (!Number.isNaN(ms)) return { seconds: Math.floor(ms / 1000) };
+    return undefined;
+  }
+  if (typeof ts === 'number' && Number.isFinite(ts)) {
+    // > 1e11 = millis, ไม่งั้นถือเป็น seconds
+    return { seconds: ts > 1e11 ? Math.floor(ts / 1000) : Math.floor(ts) };
+  }
+  return undefined;
+}
+
+function createdAtSeconds(ts) {
+  return normalizeCreatedAt(ts)?.seconds ?? 0;
+}
+
 app.get('/api/admin/users', requireAdmin, async (req, res) => {
   try {
     // 1) ข้อมูลโปรไฟล์จาก Firestore users collection (ถ้ามี)
@@ -79,13 +136,15 @@ app.get('/api/admin/users', requireAdmin, async (req, res) => {
         name: u.displayName ?? existing?.name ?? '',
         username: existing?.username ?? u.displayName ?? '',
         displayName: existing?.displayName ?? u.displayName ?? '',
-        createdAt: existing?.createdAt ?? authCreatedAt(u),
+        // normalize ทุกรูป ({seconds}/{_seconds}/ISO/number) → { seconds } เดียว กัน Invalid Date
+        createdAt: normalizeCreatedAt(existing?.createdAt) ?? authCreatedAt(u),
       };
       byUid.set(u.uid, existing ? { ...existing, ...authProfile } : authProfile);
     });
 
     const data = Array.from(byUid.values());
-    data.sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0));
+    // ทุก row ถูก normalize เป็น { seconds } แล้ว — sort ปลอดภัย
+    data.sort((a, b) => createdAtSeconds(b.createdAt) - createdAtSeconds(a.createdAt));
     return res.json({ success: true, count: data.length, data });
   } catch (err) {
     console.error('[api/admin/users]', err.message);

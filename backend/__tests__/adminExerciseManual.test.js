@@ -113,9 +113,18 @@ function validManualPayload() {
     ttsSystem: 'female',
     status: 'draft',
     items: [
-      { wordEN: 'apple', wordTH: 'apfel', sentence: 'I eat an apple.', sentenceTH: 'x', distractors: ['banana', 'mango'] },
-      { wordEN: 'dog', wordTH: 'hund', sentence: 'The dog runs.', sentenceTH: 'y', distractors: [] },
-      { wordEN: 'cat', wordTH: 'katze', sentence: '', sentenceTH: '', distractors: ['dog'] },
+      // spec (6.1.5) + SCHEMA.md: vocab ต้องมี 10–15 ข้อต่อชุด — fixture จึงต้องมีอย่างน้อย 10 ข้อ
+      // (3 ข้อเดิมใน index 0–2 ยังคงไว้ให้ assertions เดิมใช้ได้)
+      { wordEN: 'apple', wordTH: 'แอปเปิล', sentence: 'I eat an apple.', sentenceTH: 'ฉันกินแอปเปิล', distractors: ['banana', 'mango'] },
+      { wordEN: 'dog', wordTH: 'สุนัข', sentence: 'The dog runs.', sentenceTH: 'สุนัขวิ่ง', distractors: [] },
+      { wordEN: 'cat', wordTH: 'แมว', sentence: '', sentenceTH: '', distractors: ['dog'] },
+      { wordEN: 'book', wordTH: 'หนังสือ', sentence: 'This is a book.', sentenceTH: 'นี่คือหนังสือ', distractors: ['pen'] },
+      { wordEN: 'school', wordTH: 'โรงเรียน', sentence: 'I go to school.', sentenceTH: 'ฉันไปโรงเรียน', distractors: ['home', 'park'] },
+      { wordEN: 'water', wordTH: 'น้ำ', sentence: 'Drink water.', sentenceTH: 'ดื่มน้ำ', distractors: [] },
+      { wordEN: 'house', wordTH: 'บ้าน', sentence: 'My house is big.', sentenceTH: 'บ้านของฉันหลังใหญ่', distractors: ['home'] },
+      { wordEN: 'tree', wordTH: 'ต้นไม้', sentence: 'The tree is tall.', sentenceTH: 'ต้นไม้สูง', distractors: ['plant', 'leaf'] },
+      { wordEN: 'car', wordTH: 'รถยนต์', sentence: 'The car is red.', sentenceTH: 'รถยนต์สีแดง', distractors: [] },
+      { wordEN: 'bird', wordTH: 'นก', sentence: 'A bird sings.', sentenceTH: 'นกกำลังร้องเพลง', distractors: ['fish'] },
     ],
   };
 }
@@ -143,7 +152,7 @@ test('POST /api/admin/exercises with manual payload -> 201 creates doc with item
     assert.equal(body.data.level, 'A1');
     assert.equal(body.data.source, 'manual');
     assert.ok(Array.isArray(body.data.items));
-    assert.equal(body.data.items.length, 3);
+    assert.equal(body.data.items.length, 10);
     assert.deepEqual(body.data.items[0].distractors, ['banana', 'mango']);
     assert.deepEqual(body.data.items[2].distractors, ['dog']);
     assert.equal(state.createdDocs.length, 1);
@@ -244,9 +253,17 @@ test('PUT /api/admin/exercises/:id replaces items[] and title -> 200', async () 
         category: 'vocab',
         level: 'A1',
         items: [
-          { wordEN: 'apple', wordTH: 'apfel' },
-          { wordEN: 'banana', wordTH: 'banane' },
-          { wordEN: 'orange', wordTH: 'orange' },
+          // PUT ตรวจด้วย validator เดียวกับ POST (ต้อง 10–15 ข้อ) — วาง orange ไว้ index 2 ให้ assertion เดิม
+          { wordEN: 'apple', wordTH: 'แอปเปิล' },
+          { wordEN: 'banana', wordTH: 'กล้วย' },
+          { wordEN: 'orange', wordTH: 'ส้ม' },
+          { wordEN: 'grape', wordTH: 'องุ่น' },
+          { wordEN: 'mango', wordTH: 'มะม่วง' },
+          { wordEN: 'lemon', wordTH: 'มะนาว' },
+          { wordEN: 'peach', wordTH: 'ลูกพีช' },
+          { wordEN: 'melon', wordTH: 'แตงโม' },
+          { wordEN: 'berry', wordTH: 'เบอร์รี' },
+          { wordEN: 'kiwi', wordTH: 'กีวี' },
         ],
       }),
     });
@@ -254,7 +271,7 @@ test('PUT /api/admin/exercises/:id replaces items[] and title -> 200', async () 
     const body = await res.json();
     assert.equal(body.success, true);
     assert.equal(body.data.title, 'Updated title');
-    assert.equal(body.data.items.length, 3);
+    assert.equal(body.data.items.length, 10);
     assert.equal(body.data.items[2].wordEN, 'orange');
   } finally {
     await stopTestServer(server);

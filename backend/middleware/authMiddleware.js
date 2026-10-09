@@ -4,14 +4,19 @@
 // `requireAdmin`: ยืนยัน Bearer token จาก header `Authorization` แล้วตรวจว่าผู้ใช้
 // เป็น admin ก่อนอนุญาตให้เข้าถึง `/api/admin/*` endpoints.
 //
-// ตรวจสิทธิ์ 2 ช่องทาง (อย่างใดอย่างหนึ่งผ่านก็ถือว่าเป็น admin):
-//   1) custom claim `admin: true` บน ID token
-//   2) มี document ใน collection `admins` (doc id = email ตัวพิมพ์เล็ก ตาม SCHEMA.md)
+// ลำดับการตรวจ (3 ทาง — ผ่านทางใดทางหนึ่งก็ถือว่าเป็น admin):
+//   0) `req.user` ถูกตั้งไว้แล้ว (โดย global guard ใน server.js) → ผ่านเลย
+//      (กัน verify ซ้ำ เมื่อมี global guard + router middleware ทั้งคู่)
+//   1) admin session token (ออกโดย POST /api/admin/login — HMAC ฝั่งเราเอง)
+//   2) Firebase ID token + custom claim `admin: true`
+//   3) Firebase ID token + มี document ใน collection `admins` (doc id = email ตัวพิมพ์เล็ก)
+//      — คงไว้ให้โมบายล์ (AdminLoginScreen) และ test เดิมไม่พัง
 //
 // HTTP status:
 //   - 401  ไม่มี / รูปแบบ token ไม่ถูกต้อง / token ไม่ถูกต้องหรือหมดอายุ
 //   - 403  ยืนยันตัวตนแล้ว แต่ไม่ใช่ admin
 const { adminAuth, db } = require('../config/firebase');
+const { verifyAdminToken } = require('../utils/adminSessionToken');
 
 /**
  * ดึง Bearer token จาก `Authorization` header
@@ -50,11 +55,29 @@ async function findAdminDoc(decoded) {
  * Middleware — ยืนยันตัวตน + สิทธิ์ admin
  */
 async function requireAdmin(req, res, next) {
+  // 0) req.user ถูกตั้งโดย global guard แล้ว → ผ่านเลย (กัน verify ซ้ำ)
+  if (req.user) return next();
+
   const idToken = extractBearerToken(req);
   if (!idToken) {
     return res.status(401).json({ success: false, error: 'Unauthorized: missing bearer token' });
   }
 
+  // 1) admin session token ใหม่ (HMAC ฝั่งเราเอง — ออกโดย POST /api/admin/login)
+  //    Firebase ID token ก็เป็น JWT เหมือนกันแต่ลงนามคนละ key → คืน null ที่นี่เอง
+  const sessionPayload = verifyAdminToken(idToken);
+  if (sessionPayload) {
+    req.user = {
+      admin: true,
+      username: sessionPayload.username,
+      name: sessionPayload.name,
+      role: sessionPayload.role,
+      authType: 'session',
+    };
+    return next();
+  }
+
+  // 2/3) fallback: Firebase ID token (โมบายล์ / ระบบเดิม — backward-compatible)
   let decoded;
   try {
     decoded = await adminAuth.verifyIdToken(idToken);
