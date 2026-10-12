@@ -189,7 +189,7 @@ router.post('/login', async (req, res) => {
   const role = adminDoc.role || 'admin';
   const uid = String(adminDoc.uid || adminDoc.id || username); // สำหรับ Firebase custom token
 
-  // session token สำหรับเรียก /api/admin/* (เก็บใน localStorage ของ Admin Web)
+  // session token สำหรับเรียก /api/admin/* (เก็บใน sessionStorage ของ Admin Web)
   const token = signAdminToken({ username, role, name });
 
   // Firebase custom token สำหรับ signInWithCustomToken (fail-soft — สร้างไม่ได้ไม่ block login)

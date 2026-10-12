@@ -5,10 +5,13 @@
 // สิ่งที่การันตี (กันข้อมูลผิดพลาดถูกเขียนลง Firestore):
 //   1. ทุกชุดมีคำ 4-15 ข้อ (กฎของ adminVocabularyRoutes MIN_ITEMS/MAX_ITEMS)
 //   2. ครบทั้ง 4 รูปแบบฝึก: matching / spelling / listenRepeat / fillblank
-//   3. ประโยคทุกอันมีคำนั้นอยู่ข้างใน (API บังคับ — adminVocabularyRoutes.js:74)
+//   3. ประโยคทุกอันมีคำนั้นอยู่ข้างใน (API บังคับ — adminVocabularyRoutes validatePayload)
 //   4. FIB: คำและประโยคไม่ซ้ำกัน
 //   5. คำทุกคำมีอยู่ในคลังคำศัพท์จริง *ระดับเดียวกัน*
 //   6. distractors ไม่มีคำตอบเดียวกับคำนั้น
+//   7. FIB distractors (ถ้ามี): array ≤2 ช่อง, ไม่ซ้ำ, ไม่เท่าคำตอบถูก, อยู่ในคลังระดับเดียวกัน
+//   8. API (adminVocabularyRoutes): เก็บ distractors ลง Firestore แบบ dedup + จำกัดสูงสุด 2 ช่อง
+//      — ครอบคลุม Step 4 Dynamic Distractors ของ VocabSet Wizard
 
 const test   = require('node:test');
 const assert = require('node:assert/strict');
@@ -148,6 +151,35 @@ test('FIB: คำและประโยคไม่ซ้ำกัน (API thr
   });
 });
 
+// ─── Dynamic distractors ของข้อเติมช่องว่าง (Step 4) ────────────────────────
+// contract เดียวกับ cleanDistractors() ใน adminVocabularyRoutes.js:
+// array ≤5 ช่อง / ไม่ซ้ำ (case-insensitive) / ไม่เท่าคำตอบถูก / อยู่ในคลังระดับเดียวกัน
+test('FIB distractors (ถ้ามี) อยู่ในกรอบ: ≤5 ช่อง ไม่ซ้ำ ไม่เท่าคำตอบถูก อยู่ในคลังระดับเดียวกัน', () => {
+  DOCS.forEach((d) => {
+    const sameLevel = new Set(
+      VOCAB_POOL.filter((v) => v.cefrLevel === d.level).map((v) => v.wordEN)
+    );
+    d.fillInBlankSentences.forEach((f) => {
+      const dists = f.distractors ?? [];
+      assert.ok(Array.isArray(dists), `${d.id}/${f.wordEN} FIB distractors ต้องเป็น array`);
+      assert.ok(dists.length <= 2, `${d.id}/${f.wordEN} FIB distractors เกิน 2 ช่อง (${dists.length})`);
+      assert.equal(
+        new Set(dists.map((x) => String(x).toLowerCase())).size,
+        dists.length,
+        `${d.id}/${f.wordEN} FIB distractors ซ้ำกัน`
+      );
+      dists.forEach((dw) => {
+        assert.notEqual(
+          String(dw).toLowerCase(),
+          f.wordEN.toLowerCase(),
+          `${d.id}/${f.wordEN} FIB distractor เท่ากับคำตอบถูก`
+        );
+        assert.ok(sameLevel.has(dw), `${d.id}/${f.wordEN}: FIB distractor "${dw}" ไม่ได้ระดับ ${d.level}`);
+      });
+    });
+  });
+});
+
 test('ทุก FIB sentence มีคำที่เติม (เงื่อนไข validate ของ API)', () => {
   DOCS.forEach((d) => {
     d.fillInBlankSentences.forEach((f) => {
@@ -220,4 +252,213 @@ test('sampleDistinct ไม่สแกนคำใน exclude และไม�
 
   assert.equal(sampleDistinct(['a', 'b'], 5, [], rng).length, 2); // ขอมากกว่าที่มี
   assert.deepEqual(sampleDistinct(['a', 'b'], 0, [], rng), []);   // ขอ 0
+});
+
+// ─── API: adminVocabularyRoutes — dynamic distractors (dedup + cap 2) ────────
+// ยืนยันพฤติกรรมที่ Step 4 (VocabSet Wizard) พึ่งพา: เก็บ distractors ลง Firestore
+// พร้อม dedup และจำกัดสูงสุด 2 ช่อง — mock firebase แบบเดียวกับ adminExerciseManual.test.js
+// (node --test รันคนละ process ต่อไฟล์ → require.cache ไม่รั่วข้ามไฟล์ทดสอบ)
+const http   = require('node:http');
+const { once } = require('node:events');
+
+function installFirebaseMock() {
+  const state = {
+    verifyIdToken: async () => ({ uid: 'u1', email: 'admin@example.com', admin: true }),
+    createdDocs: [],
+    nextDocId: 1,
+  };
+  const fakeAuth = { verifyIdToken: (token) => state.verifyIdToken(token) };
+
+  function makeDocChain(collectionName, docId) {
+    return {
+      get: async () => {
+        const existing = state.createdDocs.find((d) => d.col === collectionName && d.id === docId);
+        return {
+          exists: !!existing,
+          data: () => (existing ? existing.data : {}),
+          id: existing ? existing.id : docId,
+        };
+      },
+      update: async (fields) => {
+        const rec = state.createdDocs.find((d) => d.col === collectionName && d.id === docId);
+        if (!rec) throw new Error('document ' + docId + ' not found');
+        Object.assign(rec.data, fields);
+        return rec;
+      },
+      delete: async () => {
+        const idx = state.createdDocs.findIndex((d) => d.col === collectionName && d.id === docId);
+        if (idx >= 0) state.createdDocs.splice(idx, 1);
+      },
+    };
+  }
+
+  const fakeDb = {
+    collection: (name) => ({
+      doc: (id) => makeDocChain(name, id),
+      where: () => ({ get: async () => ({ empty: true, docs: [] }) }),
+      get: async () => ({ empty: true, docs: [] }),
+      add: async (data) => {
+        const id = 'auto_' + (state.nextDocId++);
+        const rec = { col: name, id, data: { ...data } };
+        state.createdDocs.push(rec);
+        return { id, get: async () => ({ exists: true, data: () => rec.data, id }) };
+      },
+    }),
+  };
+
+  const resolved = require.resolve('../config/firebase.js');
+  require.cache[resolved] = {
+    id: resolved,
+    filename: resolved,
+    loaded: true,
+    exports: { adminAuth: fakeAuth, db: fakeDb },
+  };
+  return { state, fakeAuth, fakeDb };
+}
+
+const { state } = installFirebaseMock();
+
+// require AFTER mock ถูกติดตั้ง — ห้าม require route ก่อนหน้านี้
+const adminVocabularyRoutes = require('../routes/adminVocabularyRoutes');
+
+async function startTestServer(app) {
+  const server = http.createServer(app);
+  server.listen(0, '127.0.0.1');
+  await once(server, 'listening');
+  const { port } = server.address();
+  return { server, baseUrl: 'http://127.0.0.1:' + port };
+}
+
+async function stopTestServer(server) {
+  if (typeof server.closeAllConnections === 'function') server.closeAllConnections();
+  await new Promise((resolve) => server.close(resolve));
+}
+
+function makeApp() {
+  const express = require('express');
+  const app = express();
+  app.use(express.json());
+  app.use('/api/admin/vocabulary-sets', adminVocabularyRoutes);
+  return app;
+}
+
+function authHeaders() {
+  return { authorization: 'Bearer valid.token', 'Content-Type': 'application/json' };
+}
+
+function baseItems() {
+  return [
+    { wordEN: 'apple',  wordTH: 'แอปเปิ้ล' },
+    { wordEN: 'banana', wordTH: 'กล้วย' },
+    { wordEN: 'orange', wordTH: 'ส้ม' },
+    { wordEN: 'grape',  wordTH: 'องุ่น' },
+  ];
+}
+
+test('POST: FIB distractors ถูก dedup + ตัดเท่าคำตอบถูก + จำกัด 2 ช่อง ก่อนเขียนลง Firestore', async () => {
+  state.createdDocs = [];
+  state.nextDocId = 1;
+  const { server, baseUrl } = await startTestServer(makeApp());
+  try {
+    const res = await fetch(baseUrl + '/api/admin/vocabulary-sets', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({
+        title: 'ชุดทดสอบ dynamic distractors',
+        level: 'A1',
+        ttsSystem: 'female',
+        playbackSpeed: 1.0,
+        status: 'draft',
+        items: baseItems(),
+        fillInBlankSentences: [{
+          wordEN: 'apple',
+          wordTH: 'แอปเปิ้ล',
+          sentence: 'I eat an apple every day.',
+          sentenceTH: 'ฉันกินแอปเปิ้ลทุกวัน',
+          // มีค่าว่าง + ซ้ำ (case-insensitive) + เท่าคำตอบถูก + เกิน 2 ช่อง
+          distractors: ['banana', 'banana', ' Banana ', '', 'CAT', 'cat', 'dog', 'egg', 'fish', 'apple', 'grape'],
+        }],
+      }),
+    });
+    assert.equal(res.status, 201);
+    const body = await res.json();
+    assert.equal(body.success, true);
+
+    const stored = state.createdDocs.find((d) => d.col === 'exercises');
+    assert.ok(stored, 'ต้องมีเอกสารถูกสร้างใน collection exercises');
+    const fib = stored.data.fillInBlankSentences[0];
+    assert.ok(Array.isArray(fib.distractors), 'FIB ต้องเก็บ distractors เป็น array');
+    // trim → ตัดว่าง → dedup (เก็บ casing ตัวแรก) → cap 2 เก็บ 'banana','CAT' (ตัด 'dog'/'egg'/... ที่เกิน)
+    assert.deepEqual(fib.distractors, ['banana', 'CAT']);
+  } finally {
+    await stopTestServer(server);
+  }
+});
+
+test('POST: FIB ไม่ส่ง distractors → เก็บเป็น [] (array เสมอ ไม่ใช่ undefined)', async () => {
+  state.createdDocs = [];
+  state.nextDocId = 50;
+  const { server, baseUrl } = await startTestServer(makeApp());
+  try {
+    const res = await fetch(baseUrl + '/api/admin/vocabulary-sets', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({
+        title: 'ชุดทดสอบ FIB ไม่มี distractors',
+        level: 'A1',
+        ttsSystem: 'female',
+        playbackSpeed: 1.0,
+        status: 'draft',
+        items: baseItems(),
+        fillInBlankSentences: [{
+          wordEN: 'banana',
+          wordTH: 'กล้วย',
+          sentence: 'I like banana very much.',
+          sentenceTH: 'ฉันชอบกล้วยมาก',
+        }],
+      }),
+    });
+    assert.equal(res.status, 201);
+    const stored = state.createdDocs.find((d) => d.col === 'exercises');
+    const fib = stored.data.fillInBlankSentences[0];
+    assert.ok(Array.isArray(fib.distractors), 'ต้องมี field distractors เสมอ');
+    assert.equal(fib.distractors.length, 0);
+  } finally {
+    await stopTestServer(server);
+  }
+});
+
+test('POST: items distractors ถูก dedup + ตัดเท่าคำตอบถูก + จำกัด 2 ช่อง', async () => {
+  state.createdDocs = [];
+  state.nextDocId = 100;
+  const { server, baseUrl } = await startTestServer(makeApp());
+  try {
+    const items = baseItems();
+    items[0] = {
+      ...items[0],
+      distractors: ['bag', 'bag', 'APPLE', '', 'cat', 'dog', 'egg', 'fish', 'goat', 'hat'],
+    };
+    const res = await fetch(baseUrl + '/api/admin/vocabulary-sets', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({
+        title: 'ชุดทดสอบ items distractors',
+        level: 'A1',
+        ttsSystem: 'female',
+        playbackSpeed: 1.0,
+        status: 'draft',
+        items,
+      }),
+    });
+    assert.equal(res.status, 201);
+    const stored = state.createdDocs.find((d) => d.col === 'exercises');
+    const apple = stored.data.items.find((i) => i.wordEN === 'apple');
+    // 'APPLE' = คำตอบถูก → ถูกตัด, 'bag' ซ้ำ → เหลือตัวเดียว, cap 2 เก็บ 'bag','cat' (ตัด 'dog'/'egg'/... ที่เกิน)
+    assert.deepEqual(apple.distractors, ['bag', 'cat']);
+    // คำอื่นที่ไม่ส่ง distractors → []
+    const banana = stored.data.items.find((i) => i.wordEN === 'banana');
+    assert.deepEqual(banana.distractors, []);
+  } finally {
+    await stopTestServer(server);
+  }
 });

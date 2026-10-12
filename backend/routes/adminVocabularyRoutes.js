@@ -17,6 +17,30 @@ const VALID_LEVELS = ['A1', 'A2'];
 const VALID_TTS = ['male', 'female'];
 const MIN_ITEMS = 4;
 const MAX_ITEMS = 15;
+const MAX_DISTRACTORS = 2; // คำตอบหลอกสูงสุดต่อข้อของ VocabSet (Step 4: สูงสุด 2 ช่อง)
+
+/**
+ * ทำความสะอาด distractors ก่อนเขียนลง Firestore
+ * ลำดับ: trim → ตัดค่าว่าง → กันซ้ำ (case-insensitive) → ตัดเท่าคำตอบถูก → จำกัดสูงสุด max ช่อง
+ * @param {any} raw              array ดิบจาก client (อาจมีค่าว่าง/ซ้ำ/เกินจำนวน)
+ * @param {string} correctWordEN คำตอบที่ถูกของข้อนั้น (ห้ามมีใน distractors)
+ * @param {number} [max=MAX_DISTRACTORS]
+ * @returns {string[]}
+ */
+function cleanDistractors(raw, correctWordEN, max = MAX_DISTRACTORS) {
+  const correct = String(correctWordEN ?? '').trim().toLowerCase();
+  const seen = new Set();
+  const out = [];
+  for (const d of (Array.isArray(raw) ? raw : [])) {
+    const v = String(d ?? '').trim();
+    const low = v.toLowerCase();
+    if (!low || low === correct || seen.has(low)) continue;
+    seen.add(low);
+    out.push(v);
+    if (out.length >= max) break;
+  }
+  return out;
+}
 
 function sendError(res, err) {
   const status = err instanceof ApiError ? err.statusCode : 500;
@@ -59,9 +83,8 @@ function validatePayload(body, { requireItems = true } = {}) {
       sentenceTH: (it.sentenceTH ?? '').trim(),
       ttsVoice: VALID_TTS.includes(it.ttsVoice) ? it.ttsVoice : ttsSystem,
       playbackSpeed: typeof it.playbackSpeed === 'number' ? it.playbackSpeed : playbackSpeed,
-      distractors: Array.isArray(it.distractors)
-        ? it.distractors.map((d) => String(d).trim()).filter(Boolean).slice(0, 2)
-        : [],
+      // dynamic distractors: trim/dedup/กันเท่าคำตอบถูก แล้วจำกัดสูงสุด 2 ช่อง ([] = สุ่มอัตโนมัติตอนสอบ)
+      distractors: cleanDistractors(it.distractors, it.wordEN),
     }));
     for (let i = 0; i < cleanItems.length; i++) {
       if (!cleanItems[i].wordEN || !cleanItems[i].wordTH) {
@@ -117,6 +140,8 @@ function validatePayload(body, { requireItems = true } = {}) {
         wordTH: (f.wordTH ?? '').trim(),
         sentence: (f.sentence ?? '').trim(),
         sentenceTH: (f.sentenceTH ?? '').trim(),
+        // dynamic distractors ของข้อเติมช่องว่าง: เก็บลง Firestore พร้อม dedup + จำกัดสูงสุด 2 ช่อง
+        distractors: cleanDistractors(f.distractors, f.wordEN),
       }))
       .filter((f) => f.sentence || f.sentenceTH);
 

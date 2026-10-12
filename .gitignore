@@ -4,6 +4,7 @@ dist/
 .env
 backend/.env
 frontend/.env
+backend/serviceAccountKey.json
 *.log
 .DS_Store
 Thumbs.db

@@ -225,6 +225,31 @@ test('POST /api/admin/exercises with item missing wordTH -> 422', async () => {
   }
 });
 
+test('POST dynamic distractors: keeps up to 5, drops dup + correct answer', async () => {
+  state.createdDocs = [];
+  state.nextDocId = 1;
+  const { server, baseUrl } = await startTestServer(makeApp());
+  try {
+    const payload = validManualPayload();
+    // ข้อแรก: ส่งมา 6 ช่อง มีซ้ำคำตอบถูก (APPLE) + ซ้ำกันเอง (banana) → เหลือ habit/hair/half/banana/mango
+    payload.items[0].distractors = ['habit', 'hair', 'APPLE', 'banana', 'banana', 'half', 'mango'];
+    // ข้อสอง: ว่าง [] → ต้องผ่านและได้ [] (สุ่มอัตโนมัติตอนสอบ)
+    payload.items[1].distractors = [];
+    const res = await fetch(baseUrl + '/api/admin/exercises', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    });
+    assert.equal(res.status, 201);
+    const body = await res.json();
+    assert.equal(body.success, true);
+    assert.deepEqual(body.data.items[0].distractors, ['habit', 'hair', 'banana', 'half', 'mango']);
+    assert.deepEqual(body.data.items[1].distractors, []);
+  } finally {
+    await stopTestServer(server);
+  }
+});
+
 // ══════════════════════════════════════════════════════════════════════════
 // PUT /api/admin/exercises/:id - update items[] + metadata
 // ══════════════════════════════════════════════════════════════════════════

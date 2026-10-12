@@ -65,10 +65,14 @@ const inpUsername   = document.getElementById('inp-username');
 const inpPassword   = document.getElementById('inp-password');
 const topbarUser    = document.getElementById('topbar-user');
 
-// ── Admin session token (username/password login — เก็บใน localStorage) ──────
+// ── Admin session token (username/password login — เก็บใน sessionStorage) ─────
 // ทุก request ไป /api/admin/* ใช้ token นี้แทน Firebase ID token (จุดเดิม 17 จุด)
+// ใช้ sessionStorage เท่านั้น: ปิดแท็บ/เปิดแท็บใหม่ = ต้อง login ใหม่ (แก้ค้างหน้า /admin)
 const getAdminToken = () => {
-	try { return localStorage.getItem('adminToken') || ''; } catch (_) { return ''; }
+	try { return sessionStorage.getItem('adminToken') || ''; } catch (_) { return ''; }
+};
+const getAdminUsername = () => {
+	try { return sessionStorage.getItem('adminUsername') || ''; } catch (_) { return ''; }
 };
 function getAuthHeaders() {
 	const token = getAdminToken();
@@ -77,12 +81,18 @@ function getAuthHeaders() {
 }
 function setAdminSessionStorage(token, username) {
 	try {
-		localStorage.setItem('adminToken', token);
-		localStorage.setItem('adminUsername', username);
+		sessionStorage.setItem('adminToken', token);
+		sessionStorage.setItem('adminUsername', username);
+		// ล้างค่าเก่าที่เคยค้างใน localStorage (กันแท็บใหม่ restore จากของเก่า)
+		localStorage.removeItem('adminToken');
+		localStorage.removeItem('adminUsername');
 	} catch (_) { /* ignore */ }
 }
 function clearAdminSessionStorage() {
 	try {
+		sessionStorage.removeItem('adminToken');
+		sessionStorage.removeItem('adminUsername');
+		// ล้างของเก่าเผื่อเคยค้างก่อนย้ายมา sessionStorage
 		localStorage.removeItem('adminToken');
 		localStorage.removeItem('adminUsername');
 	} catch (_) { /* ignore */ }
@@ -212,9 +222,9 @@ onAuthStateChanged(auth, (user) => {
 	try {
 		isAuthChecking = false;
 		const savedToken    = getAdminToken();
-		const savedUsername = localStorage.getItem('adminUsername') || '';
+		const savedUsername = getAdminUsername();
 
-		// ไม่มี session token ใน localStorage → ถือว่าออกจากระบบแล้ว
+		// ไม่มี session token ใน sessionStorage (แท็บใหม่/ปิดแท็บแล้ว) → ถือว่าออกจากระบบแล้ว
 		// (Firebase session ค้างอยู่คนเดียวไม่พอ — token คือ source of truth)
 		if (!savedToken) {
 			isAdminSession = false;
@@ -229,7 +239,7 @@ onAuthStateChanged(auth, (user) => {
 			return;
 		}
 
-		// restore หลังรีเฟรชหน้า (มี token ค้างใน localStorage):
+		// restore หลังรีเฟรชหน้าในแท็บเดิม (มี token ใน sessionStorage เท่านั้น):
 		// - Firebase session ยังอยู่ → เข้า dashboard เลย
 		// - session หาย (IndexedDB ถูกล้าง) → ขอ customToken ใหม่ผ่าน
 		//   POST /api/admin/session แล้ว signIn เงียบๆ (fail-soft ทุกขั้นตอน)
@@ -360,7 +370,7 @@ loginForm.addEventListener('submit', async (e) => {
 			return;
 		}
 
-		// 2. เก็บ session token + username ใน localStorage (ใช้ทุก request แทน Firebase ID token)
+		// 2. เก็บ session token + username ใน sessionStorage (ใช้ทุก request แทน Firebase ID token)
 		setAdminSessionStorage(data.token, data.username || username);
 
 		// 3. Firebase session ประกอบ (fail-soft — ล้มเหลวก็ยังเรียก API ได้ด้วย session token)
@@ -1007,7 +1017,17 @@ function renderManualItems() {
 	}
 	exItemList.innerHTML = exManualItems.map((item, idx) => {
 		const uid = item._uid;
-		const dist = Array.isArray(item.distractors) ? item.distractors.join(', ') : (item.distractors || '');
+		// Normalize distractors เป็น array เสมอ — รองรับข้อมูลเก่าที่เป็น string คั่นคอมมา
+		const distArr = Array.isArray(item.distractors)
+			? item.distractors.map((d) => String(d ?? '').trim()).filter(Boolean)
+			: String(item.distractors ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+		item.distractors = distArr;
+		const distRows = distArr.map((d, di) => `
+					<div class="mi-dist-row" data-uid="${uid}" data-di="${di}" style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">
+						<input class="mi-dist-input" type="text" placeholder="พิมพ์เพื่อค้นหา เช่น ban… (bag — กระเป๋า)" value="${escHtml(d)}" data-uid="${uid}" data-di="${di}" autocomplete="off" style="flex:1;" />
+						<button type="button" class="mi-dist-del" data-uid="${uid}" data-di="${di}" title="ลบคำตอบหลอกนี้" style="border:1px solid #f0caca;background:#fff5f5;color:#d63031;border-radius:8px;padding:6px 10px;cursor:pointer;">🗑</button>
+						<div class="mi-dist-suggest hidden" data-uid="${uid}" data-di="${di}" style="position:absolute;"></div>
+					</div>`).join('');
 		return `
 			<div class="manual-item-card" data-uid="${uid}">
 				<div class="mi-header">
@@ -1033,9 +1053,10 @@ function renderManualItems() {
 					<input class="mi-sentenceTH" type="text" placeholder="TH translation of the sentence" value="${escHtml(item.sentenceTH || '')}" data-uid="${uid}" />
 				</div>
 				<div class="form-field">
-					<label>Distractors (comma separated)</label>
-					<input class="mi-distractors" type="text" placeholder="e.g. apple" value="${escHtml(dist)}" data-uid="${uid}" />
-					<div class="field-hint">1-2 distractor words (not including the main word)</div>
+					<label>คำตอบหลอก (Distractors) — ว่าง = สุ่มอัตโนมัติตอนสอบ</label>
+					<div class="mi-dist-list" data-uid="${uid}" style="position:relative;">${distRows || '<div class="text-muted" style="font-size:12px;padding:4px 0 8px;">— ไม่กำหนด (สุ่มอัตโนมัติ) —</div>'}</div>
+					<button type="button" class="mi-dist-add" data-uid="${uid}" style="border:1px dashed #5B4FCF;background:#EEF0FF;color:#5B4FCF;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:13px;">+ เพิ่มคำตอบหลอก</button>
+					<div class="field-hint">สูงสุด 5 ช่อง — ห้ามซ้ำคำตอบถูกและห้ามซ้ำกันเอง</div>
 				</div>
 			</div>`;
 	}).join('');
@@ -1049,9 +1070,59 @@ exAddItemBtn.addEventListener('click', () => {
 
 exItemList.addEventListener('click', (e) => {
 	const delBtn = e.target.closest('.mi-delete-btn');
-	if (!delBtn) return;
-	exManualItems = exManualItems.filter(it => it._uid !== delBtn.dataset.uid);
-	renderManualItems();
+	if (delBtn) {
+		exManualItems = exManualItems.filter(it => it._uid !== delBtn.dataset.uid);
+		renderManualItems();
+		return;
+	}
+	// + เพิ่มคำตอบหลอก — สูงสุด 5 ช่องต่อข้อ
+	const addDist = e.target.closest('.mi-dist-add');
+	if (addDist) {
+		const item = exManualItems.find(it => it._uid === addDist.dataset.uid);
+		if (!item) return;
+		if (!Array.isArray(item.distractors)) item.distractors = [];
+		if (item.distractors.length >= 5) {
+			alert('เพิ่มคำตอบหลอกได้สูงสุด 5 ช่องต่อข้อ');
+			return;
+		}
+		item.distractors.push('');
+		renderManualItems();
+		// โฟกัสช่องใหม่ทันที
+		const rows = exItemList.querySelectorAll(`.mi-dist-input[data-uid="${item._uid}"]`);
+		rows[rows.length - 1]?.focus();
+		return;
+	}
+	// 🗑 ลบช่องคำตอบหลอก
+	const delDist = e.target.closest('.mi-dist-del');
+	if (delDist) {
+		const item = exManualItems.find(it => it._uid === delDist.dataset.uid);
+		if (!item || !Array.isArray(item.distractors)) return;
+		item.distractors.splice(parseInt(delDist.dataset.di, 10), 1);
+		renderManualItems();
+		return;
+	}
+	// เลือกคำจาก autocomplete
+	const sugBtn = e.target.closest('.mi-dist-sug-item');
+	if (sugBtn) {
+		const item = exManualItems.find(it => it._uid === sugBtn.dataset.uid);
+		if (!item) return;
+		const di = parseInt(sugBtn.dataset.di, 10);
+		const val = sugBtn.dataset.en || '';
+		// กันซ้ำ: เท่าคำตอบถูก หรือซ้ำช่องอื่นในข้อเดียวกัน
+		const correct = String(item.wordEN || '').trim().toLowerCase();
+		const dupOther = (item.distractors || []).some((d, j) => j !== di && String(d || '').trim().toLowerCase() === val.toLowerCase());
+		if (val.toLowerCase() === correct) {
+			alert('คำตอบหลอกห้ามซ้ำกับคำตอบที่ถูกต้อง');
+			return;
+		}
+		if (dupOther) {
+			alert('คำนี้เลือกไปแล้วในข้อนี้');
+			return;
+		}
+		item.distractors[di] = val;
+		renderManualItems();
+		return;
+	}
 });
 
 exItemList.addEventListener('input', (e) => {
@@ -1064,14 +1135,58 @@ exItemList.addEventListener('input', (e) => {
 	else if (inp.classList.contains('mi-wordTH')) item.wordTH = inp.value.trim();
 	else if (inp.classList.contains('mi-sentence')) item.sentence = inp.value.trim();
 	else if (inp.classList.contains('mi-sentenceTH')) item.sentenceTH = inp.value.trim();
-	else if (inp.classList.contains('mi-distractors')) {
-		item.distractors = inp.value.split(',').map(s => s.trim()).filter(Boolean);
+	// พิมพ์ในช่องคำตอบหลอก → อัปเดต state + โชว์ autocomplete จากคลัง
+	else if (inp.classList.contains('mi-dist-input')) {
+		const di = parseInt(inp.dataset.di, 10);
+		if (!Array.isArray(item.distractors)) item.distractors = [];
+		item.distractors[di] = inp.value;
+		renderMiDistSuggest(uid, di, inp.value);
+	}
+});
+
+// Autocomplete คำตอบหลอกจากคลังคำศัพท์ — โชว์ EN + TH, พิมพ์กรองอัตโนมัติ
+async function renderMiDistSuggest(uid, di, text) {
+	const box = exItemList.querySelector(`.mi-dist-suggest[data-uid="${uid}"][data-di="${di}"]`);
+	if (!box) return;
+	const q = String(text ?? '').trim().toLowerCase();
+	if (q.length < 1) { box.classList.add('hidden'); box.innerHTML = ''; return; }
+	const cache = await ensureVocabSuggestCache();
+	const item = exManualItems.find(it => it._uid === uid);
+	const correct = String(item?.wordEN || '').trim().toLowerCase();
+	const taken = new Set((item?.distractors || []).map((d, j) => j === di ? null : String(d || '').trim().toLowerCase()).filter(Boolean));
+	const matches = cache
+		.filter((v) => {
+			const en = String(v.wordEN || '').toLowerCase();
+			const th = String(v.wordTH || '').toLowerCase();
+			if (!en.includes(q) && !th.includes(q)) return false;
+			if (en === correct) return false;      // ห้ามเท่าคำตอบถูก
+			if (taken.has(en)) return false;       // ห้ามซ้ำช่องอื่นในข้อเดียวกัน
+			return true;
+		})
+		.slice(0, 8);
+	if (!matches.length) { box.classList.add('hidden'); box.innerHTML = ''; return; }
+	box.innerHTML = matches.map((m) =>
+		`<button type="button" class="mi-dist-sug-item" data-uid="${uid}" data-di="${di}" data-en="${escHtml(m.wordEN)}">`
+		+ `<strong>${escHtml(m.wordEN)}</strong><span> — ${escHtml(m.wordTH || '—')}</span></button>`
+	).join('');
+	box.classList.remove('hidden');
+	box.style.cssText = 'position:absolute;z-index:50;left:0;right:44px;top:100%;background:#fff;border:1px solid #e0e0f5;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);max-height:220px;overflow:auto;padding:4px;display:flex;flex-direction:column;gap:2px;';
+}
+
+// คลิกนอกช่อง → ปิด suggest ทั้งหมด
+document.addEventListener('click', (e) => {
+	if (!e.target.closest('.mi-dist-row')) {
+		exItemList.querySelectorAll('.mi-dist-suggest').forEach((el) => el.classList.add('hidden'));
 	}
 });
 
 function getCleanManualItems() {
 	return exManualItems.map(it => {
 		const { _uid, ...rest } = it;
+		// ตัดช่องว่าง/ค่าว่างของ distractors ก่อนส่ง backend (กันส่ง ['', ...])
+		if (Array.isArray(rest.distractors)) {
+			rest.distractors = rest.distractors.map((d) => String(d ?? '').trim()).filter(Boolean);
+		}
 		return rest;
 	});
 }
@@ -2533,7 +2648,7 @@ async function loadAdmins() {
 	const renderRows = (rows) => {
 		tbody.innerHTML = '';
 		let i = 1;
-		const savedUsername = (localStorage.getItem('adminUsername') || '').toLowerCase();
+		const savedUsername = getAdminUsername().toLowerCase();
 		rows.forEach((row) => {
 			const docId = String(row.id ?? '');
 			const displayUsername = toDisplayUsername(row);
@@ -3108,11 +3223,9 @@ function renderVocabSetSentences() {
 	vocabsetFibList.innerHTML = '';
 	vocabsetFibCount.textContent = String(vocabsetSentenceRows.length);
 	vocabsetSentenceRows.forEach((r, k) => {
-		// normalize distractors state (เก็บ 2 ช่องเสมอ: ['', ''] = ไม่กำหนด)
-		if (!Array.isArray(r.distractors) || r.distractors.length !== 2) {
-			const prev = Array.isArray(r.distractors) ? r.distractors : [];
-			r.distractors = [prev[0] || '', prev[1] || ''];
-		}
+		// normalize distractors state — dynamic 0-2 ช่อง ([] = ไม่กำหนด → สุ่มอัตโนมัติตอนสอบ)
+		if (!Array.isArray(r.distractors)) r.distractors = [];
+		r.distractors = r.distractors.slice(0, 2).map((d) => String(d ?? ''));
 		const row = document.createElement('div');
 		row.className = 'fib-row';
 		row.dataset.row = String(k);
@@ -3122,15 +3235,22 @@ function renderVocabSetSentences() {
 			+ '</select>'
 			+ '<input type="text" data-row="' + k + '" data-field="sentence" value="' + (r.sentence || '') + '" placeholder="I eat an apple every day." />'
 			+ '<input type="text" data-row="' + k + '" data-field="sentenceTH" value="' + (r.sentenceTH || '') + '" placeholder="ฉันกินแอปเปิ้ลทุกวัน" />'
-			+ '<div class="fib-distr-wrap" style="grid-column:1 / -1;display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding-top:6px;">'
-			+ '<span style="font-size:12px;color:#6b7280;white-space:nowrap;">คำตอบหลอก (เลือกจากคำศัพท์จับคู่):</span>'
-			+ '<select class="fib-word-select fib-distractor" data-row="' + k + '" data-slot="0" title="คำตอบหลอก 1">'
-			+ buildFibDistractorOptions(k, 0)
-			+ '</select>'
-			+ '<select class="fib-word-select fib-distractor" data-row="' + k + '" data-slot="1" title="คำตอบหลอก 2">'
-			+ buildFibDistractorOptions(k, 1)
-			+ '</select>'
-			+ '<span style="font-size:11px;color:#9ca3af;">เว้นว่าง = สุ่มอัตโนมัติ</span>'
+			+ '<div class="fib-distr-wrap" style="grid-column:1 / -1;display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;padding-top:6px;">'
+			+ '<span style="font-size:12px;color:#6b7280;white-space:nowrap;padding-top:6px;">คำตอบหลอก (พิมพ์ค้นหาจากคลังคำศัพท์):</span>'
+			+ '<div class="fib-dist-list" style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:260px;position:relative;">'
+			+ (r.distractors.length
+				? r.distractors.map((d, di) =>
+					'<div class="fib-dist-row" data-row="' + k + '" data-di="' + di + '" style="display:flex;gap:8px;align-items:center;position:relative;">'
+					+ '<input type="text" class="fib-dist-input" data-row="' + k + '" data-di="' + di + '" value="' + escHtml(d) + '" placeholder="พิมพ์เพื่อค้นหา เช่น bag" autocomplete="off" style="flex:1;" />'
+					+ '<button type="button" class="fib-dist-del" data-row="' + k + '" data-di="' + di + '" title="ลบคำตอบหลอกนี้" style="border:1px solid #f0caca;background:#fff5f5;color:#d63031;border-radius:8px;padding:6px 10px;cursor:pointer;">🗑</button>'
+					+ '<div class="fib-dist-suggest pair-suggest-list hidden" data-row="' + k + '" data-di="' + di + '"></div>'
+					+ '</div>').join('')
+				: '<div style="font-size:11px;color:#9ca3af;padding:6px 0;">— ไม่กำหนด (สุ่มอัตโนมัติ) —</div>')
+			+ '</div>'
+			+ '<button type="button" class="fib-dist-add" data-row="' + k + '"' + (r.distractors.length >= 2 ? ' disabled' : '')
+			+ ' style="border:1px dashed #5B4FCF;background:#EEF0FF;color:#5B4FCF;border-radius:8px;padding:6px 12px;font-size:13px;cursor:'
+			+ (r.distractors.length >= 2 ? 'not-allowed' : 'pointer') + ';opacity:' + (r.distractors.length >= 2 ? '0.5' : '1') + ';">+ เพิ่มคำตอบหลอก</button>'
+			+ '<span style="font-size:11px;color:#9ca3af;padding-top:6px;">สูงสุด 2 ช่อง · เว้นว่าง = สุ่มอัตโนมัติ</span>'
 			+ '</div>';
 		const delBtn = document.createElement('button');
 		delBtn.type = 'button';
@@ -3158,82 +3278,142 @@ function buildFibWordOptions(selectedIdx) {
 	return opts;
 }
 
-// dropdown คำตอบหลอก (Step 4): options = คำศัพท์จับคู่ (Step 1) ยกเว้นคำตอบถูก
-// และยกเว้นคำที่อีกช่องของแถวเดียวกันเลือกไว้แล้ว (กันซ้ำกันเอง)
-function buildFibDistractorOptions(rowIdx, slot) {
-	const row = vocabsetSentenceRows[rowIdx];
-	const chosen = row && Array.isArray(row.distractors) ? row.distractors : [];
-	const selectedVal = (chosen[slot] || '').trim();
-	const correct = (row && row.linkIdx >= 0 && vocabsetItems[row.linkIdx])
-		? (vocabsetItems[row.linkIdx].wordEN || '').trim().toLowerCase() : '';
-	let opts = '<option value=""' + (selectedVal ? '' : ' selected') + '>— ไม่กำหนด (สุ่มอัตโนมัติ) —</option>';
-	vocabsetItems.forEach((it) => {
-		const w = (it.wordEN || '').trim();
-		if (!w) return;
-		if (w.toLowerCase() === correct) return;
-		const takenByOther = chosen.some((d, j) => j !== slot && (d || '').trim().toLowerCase() === w.toLowerCase());
-		if (takenByOther) return;
-		const isSel = selectedVal && selectedVal.toLowerCase() === w.toLowerCase();
-		opts += '<option value="' + escHtml(w) + '"' + (isSel ? ' selected' : '') + '>'
-			+ escHtml(w) + ' — ' + escHtml((it.wordTH || '').trim()) + '</option>';
-	});
-	return opts;
+// Autocomplete คำตอบหลอก (Step 4): ดึงรายการคำศัพท์จากคลังคำศัพท์หลัก
+// ผ่าน ensureVocabSuggestCache() (collection `vocabulary`) — ไม่ใช่แค่คำในชุด Step 1
+// ค้นแบบ prefix (wordEN.startsWith) ตรงกับ Step 1 — ไม่ค้นแบบ substring/คำไทย
+// กันซ้ำ: ห้ามเท่าคำตอบถูกของแถวนี้ และห้ามซ้ำกับช่องอื่นในแถวเดียวกัน
+async function renderFibDistSuggest(rowIdx, di, text) {
+	const box = vocabsetFibList.querySelector('.fib-dist-suggest[data-row="' + rowIdx + '"][data-di="' + di + '"]');
+	if (!box) return;
+	const q = String(text ?? '').trim().toLowerCase();
+	if (!q) { box.classList.add('hidden'); box.innerHTML = ''; return; }
+	const cache = await ensureVocabSuggestCache();
+	// ระหว่างรอ cache แถวอาจถูก re-render/ลบ → ทิ้ง (ตามแบบ Step 1/tense suggest)
+	if (!box.isConnected) return;
+	const r = vocabsetSentenceRows[rowIdx];
+	const correct = (r && r.linkIdx >= 0 && vocabsetItems[r.linkIdx])
+		? (vocabsetItems[r.linkIdx].wordEN || '').trim().toLowerCase() : '';
+	const taken = new Set((r && Array.isArray(r.distractors) ? r.distractors : [])
+		.map((d, j) => (j === di ? null : String(d ?? '').trim().toLowerCase()))
+		.filter(Boolean));
+	const matches = (Array.isArray(cache) ? cache : [])
+		.map((v) => ({ en: String(v.wordEN || '').trim(), th: String(v.wordTH || '').trim() }))
+		.filter((v) => {
+			const en = v.en.toLowerCase();
+			if (!en) return false;
+			if (!en.startsWith(q)) return false; // prefix match เท่านั้น (ตรงกับ Step 1)
+			if (en === correct) return false;    // ห้ามเท่าคำตอบถูก
+			if (taken.has(en)) return false;     // ห้ามซ้ำช่องอื่นในแถวเดียวกัน
+			return true;
+		})
+		.slice(0, 8);
+	if (!matches.length) { box.classList.add('hidden'); box.innerHTML = ''; return; }
+	// layout แบบ Step 1: EN ซ้าย (<strong>), TH ขวา (<span>) — styling มาจาก .pair-suggest-item
+	box.innerHTML = matches.map((m) =>
+		'<button type="button" class="pair-suggest-item fib-dist-sug-item" data-row="' + rowIdx + '" data-di="' + di + '" data-en="' + escHtml(m.en) + '">'
+		+ '<strong>' + escHtml(m.en) + '</strong>'
+		+ '<span>' + escHtml(m.th || '—') + '</span></button>'
+	).join('');
+	box.classList.remove('hidden');
 }
 
 vocabsetFibList.addEventListener('input', (e) => {
 	const row = e.target.closest('.fib-row');
 	if (!row) return;
+	const k = parseInt(row.dataset.row, 10);
+	// พิมพ์ในช่องคำตอบหลอก → เก็บลง state + เปิด autocomplete จากคำศัพท์ Step 1
+	const distInp = e.target.closest('.fib-dist-input');
+	if (distInp) {
+		const di = parseInt(distInp.dataset.di, 10);
+		const r = vocabsetSentenceRows[k];
+		if (!r) return;
+		if (!Array.isArray(r.distractors)) r.distractors = [];
+		r.distractors[di] = distInp.value;
+		renderFibDistSuggest(k, di, distInp.value);
+		return;
+	}
 	const field = e.target.dataset.field;
 	if (!field) return;
-	const k = parseInt(row.dataset.row, 10);
 	if (vocabsetSentenceRows[k]) vocabsetSentenceRows[k][field] = e.target.value;
 });
 
 // Dropdown change links the sentence row to the chosen master word.
 vocabsetFibList.addEventListener('change', (e) => {
-	// คำตอบหลอก: เก็บลง state แล้วรีเฟรชทุกช่อง (กันซ้ำกันเอง + กันเท่ากับคำตอบถูก)
-	const distSel = e.target.closest('.fib-distractor');
-	if (distSel) {
-		const k = parseInt(distSel.dataset.row, 10);
-		const slot = parseInt(distSel.dataset.slot, 10);
-		const row = vocabsetSentenceRows[k];
-		if (!row) return;
-		if (!Array.isArray(row.distractors) || row.distractors.length !== 2) row.distractors = ['', ''];
-		row.distractors[slot] = distSel.value;
-		vocabsetFibList.querySelectorAll('.fib-distractor').forEach((el) => {
-			const rk = parseInt(el.dataset.row, 10);
-			const r = vocabsetSentenceRows[rk];
-			if (!r) return;
-			el.innerHTML = buildFibDistractorOptions(rk, parseInt(el.dataset.slot, 10));
-		});
-		return;
-	}
 	const sel = e.target.closest('.fib-word-select');
 	if (!sel) return;
 	const k = parseInt(sel.dataset.row, 10);
-	if (vocabsetSentenceRows[k]) vocabsetSentenceRows[k].linkIdx = parseInt(sel.value, 10);
-	// เปลี่ยนคำตอบถูก → คำตอบหลอกที่เท่ากับคำใหม่ถูกล้างออก
 	const changed = vocabsetSentenceRows[k];
-	if (changed && Array.isArray(changed.distractors)) {
+	if (!changed) return;
+	changed.linkIdx = parseInt(sel.value, 10);
+	// เปลี่ยนคำตอบถูก → ตัดคำตอบหลอกที่เท่ากับคำใหม่ออก (เก็บช่องว่างที่กำลังกรอกไว้)
+	if (Array.isArray(changed.distractors)) {
 		const correct = (changed.linkIdx >= 0 && vocabsetItems[changed.linkIdx]
 			? (vocabsetItems[changed.linkIdx].wordEN || '') : '').trim().toLowerCase();
-		changed.distractors = changed.distractors.map(d =>
-			(d || '').trim().toLowerCase() === correct ? '' : d);
+		changed.distractors = changed.distractors
+			.filter((d) => String(d ?? '').trim().toLowerCase() !== correct);
 	}
-	// รีเฟรช option list ของ select คำศัพท์ ให้ selected ถูกต้องหลังเปลี่ยนคำเลือก
-	vocabsetFibList.querySelectorAll('.fib-word-select:not(.fib-distractor)').forEach((el) => {
-		const rk = parseInt(el.dataset.row, 10);
-		const r = vocabsetSentenceRows[rk];
+	// render ใหม่ → select คำศัพท์ + ช่องคำตอบหลอก (dynamic) + autocomplete ตรงกับ state ล่าสุด
+	renderVocabSetSentences();
+});
+
+// Dynamic distractors (Step 4): เพิ่ม/ลบช่อง + เลือกจาก autocomplete (สูงสุด 2 ช่อง)
+vocabsetFibList.addEventListener('click', (e) => {
+	const addBtn = e.target.closest('.fib-dist-add');
+	if (addBtn) {
+		const k = parseInt(addBtn.dataset.row, 10);
+		const r = vocabsetSentenceRows[k];
 		if (!r) return;
-		el.innerHTML = buildFibWordOptions(r.linkIdx);
-	});
-	// รีเฟรช dropdown คำตอบหลอกทุกช่องด้วย (คำใหม่อาจไปชน/หลุดจาก list)
-	vocabsetFibList.querySelectorAll('.fib-distractor').forEach((el) => {
-		const rk = parseInt(el.dataset.row, 10);
-		const r = vocabsetSentenceRows[rk];
+		if (!Array.isArray(r.distractors)) r.distractors = [];
+		if (r.distractors.length >= 2) {
+			alert('เพิ่มคำตอบหลอกได้สูงสุด 2 ช่องต่อข้อ');
+			return;
+		}
+		r.distractors.push('');
+		renderVocabSetSentences();
+		const inputs = vocabsetFibList.querySelectorAll('.fib-dist-input[data-row="' + k + '"]');
+		inputs[inputs.length - 1]?.focus();
+		return;
+	}
+	const delBtn = e.target.closest('.fib-dist-del');
+	if (delBtn) {
+		const k = parseInt(delBtn.dataset.row, 10);
+		const di = parseInt(delBtn.dataset.di, 10);
+		const r = vocabsetSentenceRows[k];
+		if (!r || !Array.isArray(r.distractors)) return;
+		r.distractors.splice(di, 1);
+		renderVocabSetSentences();
+		return;
+	}
+	// เลือกคำจาก autocomplete → กันซ้ำกับคำตอบถูกและช่องอื่นในแถวเดียวกัน
+	const sugBtn = e.target.closest('.fib-dist-sug-item');
+	if (sugBtn) {
+		const k = parseInt(sugBtn.dataset.row, 10);
+		const di = parseInt(sugBtn.dataset.di, 10);
+		const r = vocabsetSentenceRows[k];
 		if (!r) return;
-		el.innerHTML = buildFibDistractorOptions(rk, parseInt(el.dataset.slot, 10));
-	});
+		if (!Array.isArray(r.distractors)) r.distractors = [];
+		const val = String(sugBtn.dataset.en || '').trim();
+		const low = val.toLowerCase();
+		const correct = (r.linkIdx >= 0 && vocabsetItems[r.linkIdx]
+			? (vocabsetItems[r.linkIdx].wordEN || '') : '').trim().toLowerCase();
+		if (low === correct) {
+			alert('คำตอบหลอกห้ามซ้ำกับคำตอบที่ถูกต้อง');
+			return;
+		}
+		if (r.distractors.some((d, j) => j !== di && String(d ?? '').trim().toLowerCase() === low)) {
+			alert('คำนี้เลือกไปแล้วในข้อนี้');
+			return;
+		}
+		r.distractors[di] = val;
+		renderVocabSetSentences();
+	}
+});
+
+// คลิกนอกช่อง → ปิด autocomplete คำตอบหลอกทั้งหมด
+document.addEventListener('click', (e) => {
+	if (!e.target.closest('.fib-dist-row')) {
+		vocabsetFibList.querySelectorAll('.fib-dist-suggest').forEach((el) => el.classList.add('hidden'));
+	}
 });
 
 // Add new FIB sentence row (Step 4)
@@ -3242,7 +3422,7 @@ document.getElementById('vocabset-add-fib-btn').addEventListener('click', () => 
 		alert('เติมคำในช่องว่างได้สูงสุด 30 ข้อ');
 		return;
 	}
-	vocabsetSentenceRows.push({ linkIdx: -1, sentence: '', sentenceTH: '', distractors: ['', ''] });
+	vocabsetSentenceRows.push({ linkIdx: -1, sentence: '', sentenceTH: '', distractors: [] });
 	renderVocabSetSentences();
 });
 
@@ -3311,6 +3491,18 @@ document.getElementById('vocabset-save-btn').addEventListener('click', async () 
 			return;
 		}
 		seenFibSentences.add(key);
+		// Dynamic distractors: trim → ตัดค่าว่าง → กันซ้ำ (case-insensitive) → กันเท่าคำตอบถูก → สูงสุด 2 ช่อง
+		const dists = [];
+		const seenDists = new Set();
+		const correctLow = target.wordEN.toLowerCase();
+		for (const raw of (Array.isArray(r.distractors) ? r.distractors : [])) {
+			const v = String(raw ?? '').trim();
+			const low = v.toLowerCase();
+			if (!low || low === correctLow || seenDists.has(low)) continue;
+			seenDists.add(low);
+			dists.push(v);
+			if (dists.length >= 2) break;
+		}
 		fillInBlankSentences.push({ wordEN: target.wordEN, wordTH: target.wordTH, sentence: s, sentenceTH: st, distractors: dists });
 
 		// ยังคง overlay ลง items เพื่อ backward compatibility กับชุด/ไคลเอนต์เดิม
@@ -3383,7 +3575,7 @@ function fillVocabSetEditForm(set) {
 				linkIdx: idx,
 				sentence: (f.sentence || ''),
 				sentenceTH: (f.sentenceTH || ''),
-				distractors: Array.isArray(f.distractors) ? f.distractors.slice(0, 2) : ['', ''],
+				distractors: Array.isArray(f.distractors) ? f.distractors.slice(0, 2) : [],
 			};
 		});
 	} else {
@@ -3391,7 +3583,7 @@ function fillVocabSetEditForm(set) {
 			linkIdx: i,
 			sentence: (it.sentence || ''),
 			sentenceTH: (it.sentenceTH || ''),
-			distractors: Array.isArray(it.distractors) ? it.distractors.slice(0, 2) : ['', ''],
+			distractors: Array.isArray(it.distractors) ? it.distractors.slice(0, 2) : [],
 		}));
 	}
 	// Seed state กลางของ Checkbox (Step 2/3) จากข้อมูลที่บันทึกไว้

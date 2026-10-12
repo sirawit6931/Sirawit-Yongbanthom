@@ -87,18 +87,30 @@ function validateManualPayload(body, { requireItems = true } = {}) {
     }
     let cleanItems;
     if (items !== undefined) {
-      cleanItems = items.map((it) => ({
-        wordId: (typeof it.wordId === 'string' && it.wordId.trim())
-          ? it.wordId.trim()
-          : 'vs_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
-        wordEN: (it.wordEN ?? '').trim(),
-        wordTH: (it.wordTH ?? '').trim(),
-        sentence: (it.sentence ?? '').trim(),
-        sentenceTH: (it.sentenceTH ?? '').trim(),
-        distractors: Array.isArray(it.distractors)
-          ? it.distractors.map((d) => String(d).trim()).filter(Boolean).slice(0, 2)
-          : [],
-      }));
+      cleanItems = items.map((it) => {
+        // Dynamic distractors: รับ array สูงสุด 5 ช่อง — ว่าง [] = สุ่มอัตโนมัติตอนสอบ
+        // ลำดับ: trim → กันซ้ำ+กันเท่าคำตอบถูกก่อน → ค่อยตัดเหลือ 5 (กันตัวหลังหลุดฟรี)
+        const correctLow = String(it.wordEN ?? '').trim().toLowerCase();
+        const seenPre = new Set();
+        const deduped = (Array.isArray(it.distractors) ? it.distractors : [])
+          .map((d) => String(d ?? '').trim())
+          .filter((d) => {
+            const low = d.toLowerCase();
+            if (!low || low === correctLow || seenPre.has(low)) return false;
+            seenPre.add(low);
+            return true;
+          });
+        return {
+          wordId: (typeof it.wordId === 'string' && it.wordId.trim())
+            ? it.wordId.trim()
+            : 'vs_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+          wordEN: (it.wordEN ?? '').trim(),
+          wordTH: (it.wordTH ?? '').trim(),
+          sentence: (it.sentence ?? '').trim(),
+          sentenceTH: (it.sentenceTH ?? '').trim(),
+          distractors: deduped.slice(0, 5),
+        };
+      });
       for (let i = 0; i < cleanItems.length; i++) {
         if (!cleanItems[i].wordEN || !cleanItems[i].wordTH) {
           throw new ApiError(`ข้อ ${i + 1}: กรุณากรอกคำศัพท์ (EN) และคำแปล (TH) ให้ครบ`, 422);
