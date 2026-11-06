@@ -1,0 +1,66 @@
+// วางใน Firebase Console → Firestore Database → Rules
+// (ไฟล์นี้แค่บันทึกไว้ ไม่ได้ใช้โดยตรงในโปรเจค)
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // vocabulary: อ่านได้ทุกคนที่ login, เขียนได้เฉพาะ admin
+    match /vocabulary/{docId} {
+      allow read: if request.auth != null;
+      allow write: if false; // admin ใช้ Admin SDK เท่านั้น
+    }
+
+    // exercises: อ่านได้ทุกคนที่ login
+    match /exercises/{docId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // statistics: อ่าน/เขียนได้เฉพาะเจ้าของข้อมูล
+    match /statistics/{docId} {
+      allow read, write: if request.auth != null
+        && request.auth.token.email == resource.data.email;
+      allow create: if request.auth != null;
+    }
+
+    // favoriteVocab: อ่าน/เขียนได้เฉพาะเจ้าของ
+    match /favoriteVocab/{docId} {
+      allow read, write: if request.auth != null
+        && request.auth.token.email == resource.data.email;
+      allow create: if request.auth != null;
+    }
+
+    // users: โปรไฟล์สมาชิก (uid เป็น doc id)
+    // - อ่านได้ทุกคนที่ login (แอดมินดูรายชื่อ + เช็ก numericId ซ้ำตอนสมัคร)
+    // - create/update เฉพาะเจ้าของ doc (request.auth.uid == uid) — ป้องกันแก้โปรไฟล์คนอื่น
+    // - ลบ/เขียนข้าม uid ได้เฉพาะ backend (Admin SDK ข้าม rules)
+    // ⚠️ ต้อง copy ไฟล์นี้ไปวางใน Firebase Console → Firestore → Rules แล้วกด Publish
+    match /users/{uid} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null && request.auth.uid == uid;
+      allow delete: if false; // ลบผ่าน backend (Admin SDK) เท่านั้น
+    }
+
+    // admins: อ่านได้สำหรับตรวจสอบสิทธิ์ admin (login check)
+    // เขียนได้เฉพาะ backend (Admin SDK) เท่านั้น
+    // ⚠️ Bootstrap: ใช้ POST /api/admin/bootstrap เพื่อสร้าง admin แรก
+    // (endpoint นี้ปลอดภัยเพราะ ตรวจว่าไม่มี admin ที่มีอยู่ + ต้องมี Firebase Auth user)
+    match /admins/{document=**} {
+      allow read: if request.auth != null;
+      allow write: if false; // backend handles admin creation/updates via Admin SDK
+    }
+  }
+}
+
+// ─── สำหรับ Development ─────────────────────────────────────
+// ถ้าต้องการให้ Seed script ทำงานได้ชั่วคราว ใช้ rules นี้แทน:
+//
+// rules_version = '2';
+// service cloud.firestore {
+//   match /databases/{database}/documents {
+//     match /{document=**} {
+//       allow read, write: if request.auth != null;
+//     }
+//   }
+// }
